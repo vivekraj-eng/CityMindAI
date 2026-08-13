@@ -11,6 +11,7 @@ import './App.css';
 
 function App() {
   const [view, setView] = useState('home');
+  const [activeTab, setActiveTab] = useState('overview');
   const [complaints, setComplaints] = useState(mockComplaints);
 
   // Load complaints from Supabase with localStorage backup on mount
@@ -136,7 +137,7 @@ function App() {
   return (
     <div className="app-wrapper">
       <InteractiveBackground />
-      <Navbar view={view} setView={setView} />
+      <Navbar view={view} setView={setView} setAuthorityTab={setActiveTab} />
       <main className="main-content">
         <AnimatePresence mode="wait">
           {view === 'home' && (
@@ -174,6 +175,8 @@ function App() {
                 updateComplaintStatus={updateComplaintStatus}
                 updateComplaintCategory={updateComplaintCategory}
                 setView={setView} 
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
               />
             </motion.div>
           )}

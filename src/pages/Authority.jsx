@@ -6,47 +6,65 @@ import Overview from '../components/Overview';
 import ResolvedLedger from '../components/ResolvedLedger';
 import DepartmentsWorkload from '../components/DepartmentsWorkload';
 import AICopilotPanel from '../components/AICopilotPanel';
+import NotificationCenter from '../components/NotificationCenter';
+import ProfilePage from '../components/ProfilePage';
+import SettingsPage from '../components/SettingsPage';
 import { 
   Building2, 
   Map, 
   BarChart3, 
   ArrowLeft,
-  AlertCircle,
-  Clock,
-  CheckCircle2,
-  ListTodo,
+  ClipboardList,
   Sparkles,
   Settings,
   User,
   LayoutDashboard,
   Menu,
   X,
-  Shield
+  Shield,
+  Bell,
+  CheckCircle,
+  Search
 } from 'lucide-react';
 
-export default function Authority({ complaints, updateComplaintStatus, updateComplaintCategory, setView }) {
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'complaints' | 'map' | 'departments' | 'copilot' | 'analytics' | 'resolved'
+export default function Authority({ 
+  complaints, 
+  updateComplaintStatus, 
+  updateComplaintCategory, 
+  setView, 
+  activeTab = 'overview', 
+  setActiveTab 
+}) {
   const [selectedTicketId, setSelectedTicketId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
 
   const navigateToTab = (tabName) => {
-    setActiveTab(tabName);
+    if (setActiveTab) {
+      setActiveTab(tabName);
+    }
     setIsSidebarOpen(false);
   };
 
   const handleSelectTicket = (id) => {
     setSelectedTicketId(id);
-    setActiveTab('complaints');
+    navigateToTab('complaints');
   };
 
   const menuItems = [
     { id: 'overview', name: 'Overview', icon: LayoutDashboard },
-    { id: 'complaints', name: 'Complaints', icon: ListTodo },
+    { id: 'complaints', name: 'Complaints', icon: ClipboardList },
     { id: 'map', name: 'Live Map', icon: Map },
     { id: 'departments', name: 'Departments', icon: Building2 },
     { id: 'copilot', name: 'AI Co-pilot', icon: Sparkles },
     { id: 'analytics', name: 'Analytics', icon: BarChart3 },
-    { id: 'resolved', name: 'Resolved', icon: CheckCircle2 }
+    { id: 'resolved', name: 'Resolved', icon: CheckCircle }
+  ];
+
+  const bottomItems = [
+    { id: 'notifications', name: 'Notifications', icon: Bell },
+    { id: 'settings', name: 'Settings', icon: Settings },
+    { id: 'profile', name: 'Profile', icon: User }
   ];
 
   return (
@@ -104,7 +122,7 @@ export default function Authority({ complaints, updateComplaintStatus, updateCom
               </div>
               <div>
                 <span style={{ fontSize: '14px', fontWeight: '700', fontFamily: 'var(--font-heading)', color: 'var(--text-primary)' }}>CityMind Command</span>
-                <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Terminal v2.4</span>
+                <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Terminal v2.5</span>
               </div>
             </div>
           </div>
@@ -147,41 +165,140 @@ export default function Authority({ complaints, updateComplaintStatus, updateCom
 
         {/* Bottom Menu Items */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
-          <button
-            onClick={() => alert("Settings configuration panel is locked. Demo credentials active.")}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-secondary)',
-              fontSize: '12.5px',
-              cursor: 'pointer',
-              textAlign: 'left'
-            }}
-          >
-            <Settings size={15} />
-            <span>Settings</span>
-          </button>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', marginTop: '4px' }}>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--surface-elevated)', border: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyBox: 'center', color: 'var(--text-secondary)', justifyContent: 'center' }}>
-              <User size={14} />
-            </div>
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', display: 'block' }}>City Admin</span>
-              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Level 1 Clearance</span>
-            </div>
-          </div>
+          {bottomItems.map((item) => {
+            const IconComp = item.icon;
+            const isActive = activeTab === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigateToTab(item.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  background: isActive ? 'rgba(185, 101, 75, 0.06)' : 'transparent',
+                  border: isActive ? '1px solid rgba(185, 101, 75, 0.12)' : '1px solid transparent',
+                  color: isActive ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                  fontFamily: 'var(--font-sans)',
+                  fontSize: '13px',
+                  fontWeight: isActive ? '600' : '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  textAlign: 'left'
+                }}
+              >
+                <IconComp size={16} />
+                <span>{item.name}</span>
+              </button>
+            );
+          })}
         </div>
       </aside>
 
       {/* Main Content Workspace View */}
-      <main style={{ flex: '1', minWidth: '0', background: 'transparent' }}>
+      <main style={{ flex: '1', minWidth: '0', background: 'transparent', display: 'flex', flexDirection: 'column' }}>
+        
+        {/* Global Operational Search Bar */}
+        <div className="global-search-container" style={{ marginBottom: '24px', position: 'relative' }}>
+          <div style={{ display: 'flex', background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '8px 14px', alignItems: 'center', gap: '10px', boxShadow: '0 2px 8px rgba(185,101,75,0.02)' }}>
+            <Search size={16} style={{ color: 'var(--text-muted)' }} />
+            <input 
+              type="text" 
+              placeholder="Search across Case IDs, issues, locations, status, or departments..."
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              style={{
+                width: '100%',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
+            {globalSearch && (
+              <button onClick={() => setGlobalSearch('')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Search Dropdown Overlay Results */}
+          {globalSearch.trim() && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 6px)',
+              left: 0,
+              right: 0,
+              background: 'var(--surface-color)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '8px',
+              boxShadow: '0 8px 24px rgba(185,101,75,0.12)',
+              zIndex: '990',
+              maxHeight: '280px',
+              overflowY: 'auto',
+              padding: '6px'
+            }}>
+              {complaints.filter(c => {
+                const term = globalSearch.toLowerCase().trim();
+                return c.id.toString().toLowerCase().includes(term) ||
+                       c.title?.toLowerCase().includes(term) ||
+                       c.category?.toLowerCase().includes(term) ||
+                       c.location?.toLowerCase().includes(term) ||
+                       c.status?.toLowerCase().includes(term);
+              }).length === 0 ? (
+                <div style={{ padding: '12px', fontSize: '12.5px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                  No matching grievances found.
+                </div>
+              ) : (
+                complaints.filter(c => {
+                  const term = globalSearch.toLowerCase().trim();
+                  return c.id.toString().toLowerCase().includes(term) ||
+                         c.title?.toLowerCase().includes(term) ||
+                         c.category?.toLowerCase().includes(term) ||
+                         c.location?.toLowerCase().includes(term) ||
+                         c.status?.toLowerCase().includes(term);
+                }).map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => {
+                      setGlobalSearch('');
+                      handleSelectTicket(c.id);
+                    }}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: 'none',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'background 0.2s',
+                      outline: 'none'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-elevated)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: '2px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>{c.title}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>#{c.id.toString().slice(-6)}</span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      Location: {c.location} | Dept: {c.category} | Status: <span style={{ fontWeight: '600' }}>{c.status}</span>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         {activeTab === 'overview' && (
           <Overview 
             complaints={complaints} 
@@ -217,6 +334,18 @@ export default function Authority({ complaints, updateComplaintStatus, updateCom
 
         {activeTab === 'resolved' && (
           <ResolvedLedger complaints={complaints} />
+        )}
+
+        {activeTab === 'notifications' && (
+          <NotificationCenter complaints={complaints} />
+        )}
+
+        {activeTab === 'settings' && (
+          <SettingsPage />
+        )}
+
+        {activeTab === 'profile' && (
+          <ProfilePage />
         )}
       </main>
     </div>

@@ -15,9 +15,40 @@ import {
 
 export default function MapView({ complaints, onSelectTicket }) {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+  const [apiLoadError, setApiLoadError] = useState(false);
+  const [authError, setAuthError] = useState(false);
 
-  // Render setup fallback state if API key is missing
-  if (!apiKey) {
+  // Global listener for Google Maps Authentication Errors & Load timeouts
+  useEffect(() => {
+    window.gm_authFailure = () => {
+      setAuthError(true);
+    };
+
+    const timer = setTimeout(() => {
+      if (!window.google) {
+        setApiLoadError(true);
+      }
+    }, 6000);
+
+    return () => {
+      clearTimeout(timer);
+      window.gm_authFailure = null;
+    };
+  }, []);
+
+  // Render setup fallback state if API key is missing or loaded scripts failed
+  if (!apiKey || apiLoadError || authError) {
+    let errorTitle = "Google Maps API Key Missing";
+    let errorDesc = "Please define VITE_GOOGLE_MAPS_API_KEY in your .env.local file to initialize the Live Geographic Map.";
+    
+    if (authError) {
+      errorTitle = "Google Maps Authentication Failed";
+      errorDesc = "The provided API key is invalid or lacks the required Google Maps JavaScript API permissions. Check Cloud Console restrictions.";
+    } else if (apiLoadError) {
+      errorTitle = "Google Maps API Timeout";
+      errorDesc = "The Google Maps script failed to load within 6 seconds. Verify your internet connection or check browser console logs.";
+    }
+
     return (
       <div 
         className="map-unavailable-container" 
@@ -31,18 +62,20 @@ export default function MapView({ complaints, onSelectTicket }) {
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)'
         }}
       >
-        <div style={{ display: 'inline-flex', padding: '16px', background: 'rgba(217, 119, 6, 0.08)', borderRadius: '50%', color: '#d97706', marginBottom: '20px' }}>
+        <div style={{ display: 'inline-flex', padding: '16px', background: 'rgba(185, 101, 75, 0.08)', borderRadius: '50%', color: '#B9654B', marginBottom: '20px' }}>
           <AlertTriangle size={40} />
         </div>
         <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px', fontFamily: 'var(--font-heading)' }}>
-          Map Service Unavailable
+          {errorTitle}
         </h3>
         <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', maxWidth: '460px', margin: '0 auto 24px auto', lineHeight: '1.5' }}>
-          Configure the Google Maps API key in your <code>.env.local</code> to enable live geographic maps, satellite views, and current location tracking.
+          {errorDesc}
         </p>
-        <div style={{ background: 'var(--surface-elevated)', padding: '12px 16px', borderRadius: '6px', display: 'inline-block', border: '1px solid var(--glass-border)', fontSize: '12px', color: 'var(--text-muted)' }}>
-          <code>VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here</code>
-        </div>
+        {!authError && !apiLoadError && (
+          <div style={{ background: 'var(--surface-elevated)', padding: '12px 16px', borderRadius: '6px', display: 'inline-block', border: '1px solid var(--glass-border)', fontSize: '12px', color: 'var(--text-muted)' }}>
+            <code>VITE_GOOGLE_MAPS_API_KEY=AIzaSyYourKeyHere</code>
+          </div>
+        )}
       </div>
     );
   }
