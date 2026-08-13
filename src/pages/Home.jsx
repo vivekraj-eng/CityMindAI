@@ -112,21 +112,21 @@ export default function Home({ setView }) {
             <div className="abstract-city-grid">
               <svg width="100%" height="100%" viewBox="0 0 400 400" fill="none" className="grid-svg">
                 {/* City Grid Lines */}
-                 <path d="M 50,0 L 50,400 M 150,0 L 150,400 M 250,0 L 250,400 M 350,0 L 350,400" stroke="rgba(0,0,0,0.06)" strokeWidth="1" />
-                 <path d="M 0,50 L 400,50 M 0,150 L 400,150 M 0,250 L 400,250 M 0,350 L 400,350" stroke="rgba(0,0,0,0.06)" strokeWidth="1" />
+                 <path d="M 50,0 L 50,400 M 150,0 L 150,400 M 250,0 L 250,400 M 350,0 L 350,400" stroke="rgba(185, 101, 75, 0.08)" strokeWidth="1" />
+                 <path d="M 0,50 L 400,50 M 0,150 L 400,150 M 0,250 L 400,250 M 0,350 L 400,350" stroke="rgba(185, 101, 75, 0.08)" strokeWidth="1" />
                  
                  {/* Diagonal connection lines */}
-                 <path d="M 50,150 L 200,200 L 350,150" stroke="rgba(9, 105, 218, 0.15)" strokeWidth="1.5" strokeDasharray="4 4" />
-                 <path d="M 150,350 L 200,200 L 250,50" stroke="rgba(102, 51, 153, 0.15)" strokeWidth="1.5" />
-                 <path d="M 50,250 L 200,200 L 350,350" stroke="rgba(0, 86, 179, 0.15)" strokeWidth="1.5" />
+                 <path d="M 50,150 L 200,200 L 350,150" stroke="rgba(82, 106, 120, 0.25)" strokeWidth="1.5" strokeDasharray="4 4" />
+                 <path d="M 150,350 L 200,200 L 250,50" stroke="rgba(185, 101, 75, 0.25)" strokeWidth="1.5" />
+                 <path d="M 50,250 L 200,200 L 350,350" stroke="rgba(62, 82, 94, 0.2)" strokeWidth="1.5" />
 
                 {/* City Nodes */}
-                <circle cx="50" cy="150" r="5" fill="#3b82f6" className="pulse-node-slow" />
-                <circle cx="350" cy="150" r="4" fill="#06b6d4" />
-                <circle cx="150" cy="350" r="6" fill="#8b5cf6" className="pulse-node-fast" />
-                <circle cx="250" cy="50" r="4" fill="#06b6d4" />
-                <circle cx="50" cy="250" r="5" fill="#8b5cf6" />
-                <circle cx="350" cy="350" r="6" fill="#3b82f6" />
+                <circle cx="50" cy="150" r="5" fill="#526A78" className="pulse-node-slow" />
+                <circle cx="350" cy="150" r="4" fill="#B9654B" />
+                <circle cx="150" cy="350" r="6" fill="#DABFB0" className="pulse-node-fast" />
+                <circle cx="250" cy="50" r="4" fill="#B9654B" />
+                <circle cx="50" cy="250" r="5" fill="#DABFB0" />
+                <circle cx="350" cy="350" r="6" fill="#526A78" />
                 
                 {/* Issue markers */}
                 <g transform="translate(100, 100)">

@@ -29,12 +29,12 @@
   background: var(--accent-cyan);
   color: #FFFFFF;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(9, 105, 218, 0.12);
+  box-shadow: 0 2px 8px rgba(185, 101, 75, 0.15);
 }
 
 .btn-primary:hover {
-  background: #0056b3;
-  box-shadow: 0 4px 12px rgba(9, 105, 218, 0.2);
+  background: #a0533b;
+  box-shadow: 0 4px 12px rgba(185, 101, 75, 0.25);
 }
 
 .btn-secondary {
@@ -101,8 +101,8 @@
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  background: rgba(9, 105, 218, 0.06);
-  border: 1px solid rgba(9, 105, 218, 0.15);
+  background: rgba(185, 101, 75, 0.08);
+  border: 1px solid rgba(185, 101, 75, 0.2);
 }
 
 .logo-icon {
@@ -182,7 +182,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background-image: radial-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(185, 101, 75, 0.045) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events: none;
 }
@@ -1886,21 +1886,21 @@
 }
 
 .status-resolved {
-  background: rgba(16, 185, 129, 0.1);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: rgba(46, 125, 50, 0.08);
+  color: #2e7d32;
+  border: 1px solid rgba(46, 125, 50, 0.15);
 }
 
 .status-progress {
-  background: rgba(59, 130, 246, 0.1);
-  color: #60a5fa;
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: rgba(185, 101, 75, 0.08);
+  color: #B9654B;
+  border: 1px solid rgba(185, 101, 75, 0.15);
 }
 
 .status-pending {
-  background: rgba(245, 158, 11, 0.1);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: rgba(193, 133, 38, 0.08);
+  color: #c18526;
+  border: 1px solid rgba(193, 133, 38, 0.15);
 }
 
 .view-details-action {
@@ -2522,21 +2522,21 @@
 }
 
 .status-badge-visual.status-pending {
-  background: rgba(191, 135, 0, 0.08);
-  color: #a07000;
-  border-color: rgba(191, 135, 0, 0.2);
+  background: rgba(193, 133, 38, 0.08);
+  color: #c18526;
+  border-color: rgba(193, 133, 38, 0.2);
 }
 
 .status-badge-visual.status-in-progress {
-  background: rgba(9, 105, 218, 0.08);
-  color: #0969da;
-  border-color: rgba(9, 105, 218, 0.2);
+  background: rgba(185, 101, 75, 0.08);
+  color: #B9654B;
+  border-color: rgba(185, 101, 75, 0.2);
 }
 
 .status-badge-visual.status-resolved {
-  background: rgba(45, 164, 78, 0.08);
-  color: #1a7f37;
-  border-color: rgba(45, 164, 78, 0.2);
+  background: rgba(46, 125, 50, 0.08);
+  color: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.2);
 }
 
 .inspector-title {
@@ -2659,17 +2659,17 @@
 }
 
 .urgency-text-color-high, .urgency-text-color-critical {
-  color: #CF222E;
+  color: #B03A2E;
   font-weight: 600;
   font-size: 13px;
 }
 .urgency-text-color-medium {
-  color: #BF8700;
+  color: #c18526;
   font-weight: 600;
   font-size: 13px;
 }
 .urgency-text-color-low {
-  color: #0969DA;
+  color: #526A78;
   font-weight: 600;
   font-size: 13px;
 }
@@ -2898,18 +2898,18 @@
 }
 
 .popover-urgency-badge.urgency-high, .popover-urgency-badge.urgency-critical {
-  background: rgba(207, 34, 46, 0.08);
-  color: #CF222E;
+  background: rgba(176, 58, 46, 0.08);
+  color: #B03A2E;
 }
 
 .popover-urgency-badge.urgency-medium {
-  background: rgba(191, 135, 0, 0.08);
-  color: #BF8700;
+  background: rgba(193, 133, 38, 0.08);
+  color: #c18526;
 }
 
 .popover-urgency-badge.urgency-low {
-  background: rgba(9, 105, 218, 0.08);
-  color: #0969DA;
+  background: rgba(82, 106, 120, 0.08);
+  color: #526A78;
 }
 
 .popover-status {
@@ -3109,15 +3109,15 @@
 }
 
 .red-fill-gradient {
-  background: #CF222E;
+  background: #B03A2E;
 }
 
 .yellow-fill-gradient {
-  background: #BF8700;
+  background: #c18526;
 }
 
 .blue-fill-gradient {
-  background: #0056B3;
+  background: #526A78;
 }
 
 /* Resolution Rate Linear Gauge details */
