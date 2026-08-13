@@ -22,9 +22,9 @@ import {
   Menu,
   X,
   Shield,
-  Bell,
   CheckCircle,
-  Search
+  Search,
+  LogOut
 } from 'lucide-react';
 
 export default function Authority({ 
@@ -33,7 +33,9 @@ export default function Authority({
   updateComplaintCategory, 
   setView, 
   activeTab = 'overview', 
-  setActiveTab 
+  setActiveTab,
+  user,
+  setUser
 }) {
   const [selectedTicketId, setSelectedTicketId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -51,6 +53,14 @@ export default function Authority({
     navigateToTab('complaints');
   };
 
+  const handleSignOut = () => {
+    if (setUser) {
+      setUser(null);
+      localStorage.removeItem('citymind_user');
+    }
+    setView('home');
+  };
+
   const menuItems = [
     { id: 'overview', name: 'Overview', icon: LayoutDashboard },
     { id: 'complaints', name: 'Complaints', icon: ClipboardList },
@@ -58,13 +68,8 @@ export default function Authority({
     { id: 'departments', name: 'Departments', icon: Building2 },
     { id: 'copilot', name: 'AI Co-pilot', icon: Sparkles },
     { id: 'analytics', name: 'Analytics', icon: BarChart3 },
-    { id: 'resolved', name: 'Resolved', icon: CheckCircle }
-  ];
-
-  const bottomItems = [
-    { id: 'notifications', name: 'Notifications', icon: Bell },
-    { id: 'settings', name: 'Settings', icon: Settings },
-    { id: 'profile', name: 'Profile', icon: User }
+    { id: 'resolved', name: 'Resolved', icon: CheckCircle },
+    { id: 'settings', name: 'Settings', icon: Settings }
   ];
 
   return (
@@ -86,7 +91,7 @@ export default function Authority({
           border: 'none',
           boxShadow: '0 4px 12px rgba(185,101,75,0.3)',
           cursor: 'pointer',
-          display: 'none' // Controlled in responsive CSS
+          display: 'none'
         }}
       >
         {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
@@ -163,39 +168,29 @@ export default function Authority({
           </nav>
         </div>
 
-        {/* Bottom Menu Items */}
+        {/* Bottom Sign Out Area */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
-          {bottomItems.map((item) => {
-            const IconComp = item.icon;
-            const isActive = activeTab === item.id;
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => navigateToTab(item.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  background: isActive ? 'rgba(185, 101, 75, 0.06)' : 'transparent',
-                  border: isActive ? '1px solid rgba(185, 101, 75, 0.12)' : '1px solid transparent',
-                  color: isActive ? 'var(--accent-cyan)' : 'var(--text-secondary)',
-                  fontFamily: 'var(--font-sans)',
-                  fontSize: '13px',
-                  fontWeight: isActive ? '600' : '500',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  textAlign: 'left'
-                }}
-              >
-                <IconComp size={16} />
-                <span>{item.name}</span>
-              </button>
-            );
-          })}
+          <button
+            onClick={handleSignOut}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: '6px',
+              background: 'transparent',
+              border: 'none',
+              color: '#B9654B',
+              fontSize: '13px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontWeight: '500'
+            }}
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
+          </button>
         </div>
       </aside>
 
