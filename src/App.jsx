@@ -152,6 +152,8 @@ function App() {
         setView={setView} 
         user={user} 
         setUser={setUser} 
+        activeTab={activeTab}
+        citizenTab={citizenTab}
         setAuthorityTab={setActiveTab} 
         setCitizenTab={setCitizenTab} 
       />

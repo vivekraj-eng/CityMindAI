@@ -1,17 +1,62 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Cpu, User, ChevronDown, Bell, Settings, LogOut, Shield, List, Sparkles } from 'lucide-react';
 
-export default function Navbar({ view, setView, user, setUser, setAuthorityTab, setCitizenTab }) {
+export default function Navbar({ 
+  view, 
+  setView, 
+  user, 
+  setUser, 
+  activeTab, 
+  citizenTab, 
+  setAuthorityTab, 
+  setCitizenTab 
+}) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  const handleNavClick = (targetView, hash) => {
-    setView(targetView);
-    if (hash) {
-      setTimeout(() => {
-        const el = document.getElementById(hash);
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 50);
+  const handleNavDirect = (destination) => {
+    if (destination === 'platform') {
+      setView('home');
+      return;
+    }
+
+    if (!user) {
+      setView('login');
+      return;
+    }
+
+    if (destination === 'reports') {
+      if (user.role === 'Authority') {
+        setView('authority');
+        if (setAuthorityTab) setAuthorityTab('overview');
+      } else {
+        setView('citizen');
+        if (setCitizenTab) setCitizenTab('my-reports');
+      }
+    } else if (destination === 'map') {
+      if (user.role === 'Authority') {
+        setView('authority');
+        if (setAuthorityTab) setAuthorityTab('map');
+      } else {
+        setView('citizen');
+        if (setCitizenTab) setCitizenTab('my-reports');
+      }
+    } else if (destination === 'analytics') {
+      if (user.role === 'Authority') {
+        setView('authority');
+        if (setAuthorityTab) setAuthorityTab('analytics');
+      } else {
+        setView('citizen');
+        if (setCitizenTab) setCitizenTab('my-reports');
+      }
+    } else if (destination === 'workspace') {
+      if (user.role === 'Authority') {
+        setView('authority');
+        if (setAuthorityTab) setAuthorityTab('overview');
+      } else {
+        setView('citizen');
+        if (setCitizenTab) setCitizenTab('my-reports');
+      }
     }
   };
 
@@ -51,7 +96,7 @@ export default function Navbar({ view, setView, user, setUser, setAuthorityTab, 
       if (setAuthorityTab) setAuthorityTab('notifications');
     } else {
       setView('citizen');
-      if (setCitizenTab) setCitizenTab('profile'); // citizen alerts are shown on profile settings
+      if (setCitizenTab) setCitizenTab('profile');
     }
     setIsMenuOpen(false);
   };
@@ -63,7 +108,7 @@ export default function Navbar({ view, setView, user, setUser, setAuthorityTab, 
       if (setAuthorityTab) setAuthorityTab('settings');
     } else {
       setView('citizen');
-      if (setCitizenTab) setCitizenTab('profile'); // citizen settings are on profile
+      if (setCitizenTab) setCitizenTab('profile');
     }
     setIsMenuOpen(false);
   };
@@ -100,15 +145,11 @@ export default function Navbar({ view, setView, user, setUser, setAuthorityTab, 
         </div>
 
         <nav className="main-nav">
-          <a href="#platform" onClick={(e) => { e.preventDefault(); handleNavClick('home', 'platform'); }} className={`nav-link ${view === 'home' ? '' : 'inactive'}`}>Platform</a>
-          <a href="#how-it-works" onClick={(e) => { e.preventDefault(); handleNavClick('home', 'how-it-works'); }} className={`nav-link ${view === 'home' ? '' : 'inactive'}`}>How It Works</a>
-          <a href="#intelligence" onClick={(e) => { e.preventDefault(); handleNavClick('home', 'intelligence'); }} className={`nav-link ${view === 'home' ? '' : 'inactive'}`}>Intelligence</a>
-          {user && user.role === 'Authority' && (
-            <a href="#dashboard" onClick={(e) => { e.preventDefault(); setView('authority'); }} className={`nav-link ${view === 'authority' ? 'active' : ''}`}>Dashboard</a>
-          )}
-          {user && user.role === 'Citizen' && (
-            <a href="#workspace" onClick={(e) => { e.preventDefault(); setView('citizen'); }} className={`nav-link ${view === 'citizen' ? 'active' : ''}`}>Workspace</a>
-          )}
+          <a href="#platform" onClick={(e) => { e.preventDefault(); handleNavDirect('platform'); }} className={`nav-link ${view === 'home' ? 'active' : ''}`}>Platform</a>
+          <a href="#reports" onClick={(e) => { e.preventDefault(); handleNavDirect('reports'); }} className={`nav-link ${view === 'citizen' && citizenTab === 'my-reports' ? 'active' : ''}`}>My Reports</a>
+          <a href="#map" onClick={(e) => { e.preventDefault(); handleNavDirect('map'); }} className={`nav-link ${view === 'authority' && activeTab === 'map' ? 'active' : ''}`}>Live Map</a>
+          <a href="#analytics" onClick={(e) => { e.preventDefault(); handleNavDirect('analytics'); }} className={`nav-link ${view === 'authority' && activeTab === 'analytics' ? 'active' : ''}`}>Analytics</a>
+          <a href="#workspace" onClick={(e) => { e.preventDefault(); handleNavDirect('workspace'); }} className={`nav-link ${(view === 'citizen' || view === 'authority') ? 'active' : ''}`}>Workspace</a>
         </nav>
 
         <div className="header-actions" ref={menuRef} style={{ position: 'relative' }}>
@@ -247,7 +288,6 @@ export default function Navbar({ view, setView, user, setUser, setAuthorityTab, 
   );
 }
 
-// Simple Helper icon because PlusCircle is not imported but is used in guest fallback
 function PlusCircleIcon({ size, className }) {
   return <Cpu size={size} className={className} />;
 }
