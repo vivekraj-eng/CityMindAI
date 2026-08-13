@@ -16,9 +16,10 @@ export default function Navbar({
     if (setUser) {
       setUser(null);
       localStorage.removeItem('citymind_user');
+      localStorage.removeItem('citymind_token');
     }
     setIsMenuOpen(false);
-    setView('/');
+    setView('/login');
   };
 
   // Close dropdown on click outside

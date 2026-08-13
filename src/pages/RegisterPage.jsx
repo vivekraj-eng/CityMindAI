@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Cpu, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { signUpWithEmail } from '../services/supabase';
 
 export default function RegisterPage({ setView, setUser, setCitizenTab }) {
   const [fullName, setFullName] = useState('');
@@ -7,11 +8,18 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    if (!fullName.trim() || !email.trim() || !password.trim()) {
+    if (!fullName.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
       setErrorMsg('Please fill in all registration fields.');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setErrorMsg('Please enter a valid email address.');
       return;
     }
 
@@ -20,18 +28,27 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
       return;
     }
 
-    // Mock register user session
-    const registeredUser = { 
-      name: fullName, 
-      email, 
-      role: 'Citizen' 
-    };
+    if (password.length < 6) {
+      setErrorMsg('Password should be at least 6 characters long.');
+      return;
+    }
 
-    setUser(registeredUser);
-    localStorage.setItem('citymind_user', JSON.stringify(registeredUser));
-    setView('/reports');
-    if (setCitizenTab) {
-      setCitizenTab('my-reports');
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const result = await signUpWithEmail(fullName.trim(), email.trim(), password, 'Citizen');
+      if (result && result.user) {
+        setUser(result.user);
+        localStorage.setItem('citymind_user', JSON.stringify(result.user));
+        setView('/reports');
+        if (setCitizenTab) {
+          setCitizenTab('my-reports');
+        }
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,8 +58,9 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
         
         {/* Back to Login link */}
         <button 
-          onClick={() => setView('login')} 
+          onClick={() => setView('/login')} 
           style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', marginBottom: '20px', padding: 0 }}
+          disabled={loading}
         >
           <ArrowLeft size={14} />
           <span>Back to Sign In</span>
@@ -79,6 +97,7 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
               onChange={(e) => setFullName(e.target.value)}
               style={{ padding: '9px 12px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-elevated)', color: 'var(--text-primary)', fontSize: '13px' }}
               required
+              disabled={loading}
             />
           </div>
 
@@ -93,6 +112,7 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
               onChange={(e) => setEmail(e.target.value)}
               style={{ padding: '9px 12px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-elevated)', color: 'var(--text-primary)', fontSize: '13px' }}
               required
+              disabled={loading}
             />
           </div>
 
@@ -120,6 +140,7 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
               onChange={(e) => setPassword(e.target.value)}
               style={{ padding: '9px 12px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-elevated)', color: 'var(--text-primary)', fontSize: '13px' }}
               required
+              disabled={loading}
             />
           </div>
 
@@ -134,6 +155,7 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
               onChange={(e) => setConfirmPassword(e.target.value)}
               style={{ padding: '9px 12px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-elevated)', color: 'var(--text-primary)', fontSize: '13px' }}
               required
+              disabled={loading}
             />
           </div>
 
@@ -141,14 +163,15 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
             type="submit" 
             className="btn btn-primary"
             style={{ padding: '10px', fontSize: '13px', width: '100%', marginTop: '8px', justifyContent: 'center' }}
+            disabled={loading}
           >
-            Create Account
+            {loading ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
 
         <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
           <span>Already have an account? </span>
-          <button onClick={() => setView('/login')} style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontWeight: '700', padding: 0 }}>
+          <button onClick={() => setView('/login')} style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontWeight: '700', padding: 0 }} disabled={loading}>
             Sign In
           </button>
         </div>

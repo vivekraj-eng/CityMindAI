@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Cpu, Mail, Lock, Shield, ArrowLeft } from 'lucide-react';
+import { signInWithEmail, signInWithGoogle } from '../services/supabase';
 
 export default function LoginPage({ setView, setUser, setCitizenTab }) {
   const [email, setEmail] = useState('');
@@ -8,39 +9,66 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
     return window.location.pathname === '/authority/login';
   });
   const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
       setErrorMsg('Please fill in all credentials.');
       return;
     }
 
-    if (isAuthorityLogin) {
-      // Mock Authority authentication
-      if (email === 'admin@citymind.ai' || email.includes('admin')) {
-        const adminUser = { name: 'City Admin', email, role: 'Authority', clearance: 'Level 1 Clearance' };
-        setUser(adminUser);
-        localStorage.setItem('citymind_user', JSON.stringify(adminUser));
-        setView('/workspace');
-      } else {
-        setErrorMsg('Invalid authority credentials. Try admin@citymind.ai.');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const result = await signInWithEmail(email.trim(), password);
+      if (result && result.user) {
+        // Exclude normal citizens from accessing authority workspace
+        if (isAuthorityLogin && result.user.role !== 'Authority') {
+          throw new Error('This account does not have municipal authority access.');
+        }
+
+        setUser(result.user);
+        localStorage.setItem('citymind_user', JSON.stringify(result.user));
+        if (result.token) {
+          localStorage.setItem('citymind_token', result.token);
+        }
+
+        if (result.user.role === 'Authority') {
+          setView('/workspace');
+        } else {
+          setView('/reports');
+          if (setCitizenTab) setCitizenTab('my-reports');
+        }
       }
-    } else {
-      // Mock Citizen authentication
-      const citizenUser = { name: email.split('@')[0], email, role: 'Citizen' };
-      setUser(citizenUser);
-      localStorage.setItem('citymind_user', JSON.stringify(citizenUser));
-      setView('/reports');
-      if (setCitizenTab) setCitizenTab('my-reports');
+    } catch (err) {
+      setErrorMsg(err.message || 'Authentication failed. Please verify credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleContinueAsGuest = () => {
     const guestUser = { name: 'Guest Citizen', email: 'guest@citymind.ai', role: 'Citizen' };
     setUser(guestUser);
+    localStorage.setItem('citymind_user', JSON.stringify(guestUser));
     setView('/reports');
     if (setCitizenTab) setCitizenTab('my-reports');
+  };
+
+  const handleGoogleSignIn = () => {
+    setErrorMsg('');
+    try {
+      signInWithGoogle();
+    } catch (err) {
+      setErrorMsg(err.message || 'Google OAuth failed to redirect.');
+    }
   };
 
   return (
@@ -49,7 +77,7 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
         
         {/* Header & Back arrow */}
         <button 
-          onClick={() => setView('home')} 
+          onClick={() => setView('/')} 
           style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', marginBottom: '20px', padding: 0 }}
         >
           <ArrowLeft size={14} />
@@ -87,6 +115,7 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
               onChange={(e) => setEmail(e.target.value)}
               style={{ padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-elevated)', color: 'var(--text-primary)', fontSize: '13px' }}
               required
+              disabled={loading}
             />
           </div>
 
@@ -101,6 +130,7 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
               onChange={(e) => setPassword(e.target.value)}
               style={{ padding: '10px 12px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-elevated)', color: 'var(--text-primary)', fontSize: '13px' }}
               required
+              disabled={loading}
             />
           </div>
 
@@ -119,19 +149,44 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
             type="submit" 
             className="btn btn-primary"
             style={{ padding: '10px', fontSize: '13px', width: '100%', marginTop: '6px', justifyContent: 'center' }}
+            disabled={loading}
           >
-            Sign In
+            {loading ? 'Authenticating...' : 'Sign In'}
           </button>
         </form>
 
         {!isAuthorityLogin && (
-          <button 
-            onClick={handleContinueAsGuest}
-            className="btn btn-secondary"
-            style={{ padding: '10px', fontSize: '13px', width: '100%', marginTop: '10px', justifyContent: 'center' }}
-          >
-            Continue as Citizen (Guest)
-          </button>
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', margin: '16px 0', gap: '10px' }}>
+              <div style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }}></div>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600' }}>OR</span>
+              <div style={{ flex: 1, height: '1px', background: 'var(--glass-border)' }}></div>
+            </div>
+
+            <button 
+              onClick={handleGoogleSignIn}
+              className="btn btn-secondary"
+              style={{ padding: '10px', fontSize: '13px', width: '100%', justifyContent: 'center', gap: '8px', border: '1px solid var(--glass-border)' }}
+              disabled={loading}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+
+            <button 
+              onClick={handleContinueAsGuest}
+              className="btn btn-secondary"
+              style={{ padding: '10px', fontSize: '13px', width: '100%', marginTop: '10px', justifyContent: 'center' }}
+              disabled={loading}
+            >
+              Continue as Citizen (Guest)
+            </button>
+          </>
         )}
 
         <div style={{ marginTop: '24px', borderTop: '1px solid var(--glass-border)', paddingTop: '16px', textAlign: 'center' }}>
@@ -151,6 +206,7 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
               cursor: 'pointer', 
               fontWeight: '600' 
             }}
+            disabled={loading}
           >
             <Shield size={14} className="text-cyan" />
             <span>{isAuthorityLogin ? "Are you a citizen? Sign In here" : "Are you an authority? Authority Access"}</span>

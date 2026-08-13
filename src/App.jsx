@@ -10,7 +10,7 @@ import MapView from './components/MapView';
 import Analytics from './components/Analytics';
 import InteractiveBackground from './components/InteractiveBackground';
 import { mockComplaints } from './data/mockData';
-import { fetchComplaints, insertComplaint, updateComplaint } from './services/supabase';
+import { fetchComplaints, insertComplaint, updateComplaint, getCurrentUser } from './services/supabase';
 import './App.css';
 
 function App() {
@@ -62,6 +62,26 @@ function App() {
     window.history.pushState({}, '', targetPath);
     setCurrentPath(targetPath);
   };
+
+  // Verify token session with Supabase on mount
+  useEffect(() => {
+    const verifySession = async () => {
+      const token = localStorage.getItem('citymind_token');
+      if (token) {
+        const verifiedUser = await getCurrentUser(token);
+        if (verifiedUser) {
+          setUser(verifiedUser);
+          localStorage.setItem('citymind_user', JSON.stringify(verifiedUser));
+        } else {
+          // Token expired or invalid
+          setUser(null);
+          localStorage.removeItem('citymind_user');
+          localStorage.removeItem('citymind_token');
+        }
+      }
+    };
+    verifySession();
+  }, []);
 
   // Load complaints from Supabase with localStorage backup on mount
   useEffect(() => {
@@ -174,6 +194,11 @@ function App() {
 
   // Main Route Switch Router View Renderer
   const renderRouteContent = () => {
+    if (currentPath === '/notifications') {
+      setTimeout(() => customNavigate('/reports/notifications'), 0);
+      return null;
+    }
+
     const isAuthRoute = currentPath.startsWith('/workspace') || currentPath.startsWith('/reports') || ['/map', '/analytics', '/profile'].includes(currentPath);
     if (isAuthRoute && !user) {
       return <LoginPage setView={customNavigate} setUser={setUser} setCitizenTab={setCitizenTab} />;

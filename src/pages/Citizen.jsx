@@ -178,7 +178,8 @@ export default function Citizen({
   const handleSignOut = () => {
     setUser(null);
     localStorage.removeItem('citymind_user');
-    setView('home');
+    localStorage.removeItem('citymind_token');
+    setView('/login');
   };
 
   const sidebarItems = [

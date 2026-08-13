@@ -57,8 +57,9 @@ export default function Authority({
     if (setUser) {
       setUser(null);
       localStorage.removeItem('citymind_user');
+      localStorage.removeItem('citymind_token');
     }
-    setView('home');
+    setView('/login');
   };
 
   const menuItems = [
