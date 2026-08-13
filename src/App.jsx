@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Citizen from './pages/Citizen';
@@ -69,18 +70,46 @@ function App() {
       <InteractiveBackground />
       <Navbar view={view} setView={setView} />
       <main className="main-content">
-        {view === 'home' && <Home setView={setView} />}
-        {view === 'citizen' && (
-          <Citizen complaints={complaints} addComplaint={addComplaint} setView={setView} />
-        )}
-        {view === 'authority' && (
-          <Authority 
-            complaints={complaints} 
-            updateComplaintStatus={updateComplaintStatus}
-            updateComplaintCategory={updateComplaintCategory}
-            setView={setView} 
-          />
-        )}
+        <AnimatePresence mode="wait">
+          {view === 'home' && (
+            <motion.div
+              key="home"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <Home setView={setView} />
+            </motion.div>
+          )}
+          {view === 'citizen' && (
+            <motion.div
+              key="citizen"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <Citizen complaints={complaints} addComplaint={addComplaint} setView={setView} />
+            </motion.div>
+          )}
+          {view === 'authority' && (
+            <motion.div
+              key="authority"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <Authority 
+                complaints={complaints} 
+                updateComplaintStatus={updateComplaintStatus}
+                updateComplaintCategory={updateComplaintCategory}
+                setView={setView} 
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );
