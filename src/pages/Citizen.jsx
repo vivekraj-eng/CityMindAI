@@ -299,6 +299,11 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                               <div className="step-text-col">
                                 <span className="step-name">Resolved</span>
                                 <span className="step-time">{trackResult.status?.toLowerCase() === 'resolved' ? 'Resolution verified by City Operations' : 'Awaiting completion'}</span>
+                                {trackResult.status?.toLowerCase() === 'resolved' && trackResult.resolutionNote && (
+                                  <div style={{ fontSize: '11px', marginTop: '4px', fontStyle: 'italic', background: 'rgba(46,125,50,0.05)', padding: '4px 8px', borderRadius: '4px', color: '#2e7d32', border: '1px solid rgba(46,125,50,0.1)' }}>
+                                    Note: "{trackResult.resolutionNote}"
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -384,6 +389,11 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                     <div className="step-text-col">
                       <span className="step-name">Resolved</span>
                       <span className="step-time">{selectedComplaint.status?.toLowerCase() === 'resolved' ? 'Completed & Verified' : 'Awaiting Completion'}</span>
+                      {selectedComplaint.status?.toLowerCase() === 'resolved' && selectedComplaint.resolutionNote && (
+                        <div style={{ fontSize: '11px', marginTop: '4px', fontStyle: 'italic', background: 'rgba(46,125,50,0.05)', padding: '4px 8px', borderRadius: '4px', color: '#2e7d32', border: '1px solid rgba(46,125,50,0.1)' }}>
+                          Note: "{selectedComplaint.resolutionNote}"
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

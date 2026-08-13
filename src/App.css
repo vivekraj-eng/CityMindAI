@@ -2235,13 +2235,56 @@
 }
 
 /* ----------------------------------------------------
-   Authority Portal Layout
+   Authority Portal Layout & Command Center Styles
 ---------------------------------------------------- */
 .authority-portal {
-  padding-top: 40px;
+  padding-top: 20px;
   padding-bottom: 80px;
   position: relative;
   z-index: 10;
+}
+
+@media (max-width: 900px) {
+  .authority-command-layout {
+    flex-direction: column !important;
+  }
+  .command-sidebar {
+    width: 100% !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    z-index: 990 !important;
+    border-radius: 0 !important;
+    transform: translateY(100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .command-sidebar.sidebar-open {
+    transform: translateY(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  .mobile-sidebar-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive table {
+  min-width: 600px;
+}
+
+.table-responsive tr:hover {
+  background: rgba(185, 101, 75, 0.03) !important;
 }
 
 .title-area-row {

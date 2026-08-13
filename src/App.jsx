@@ -34,6 +34,54 @@ function App() {
     loadData();
   }, []);
 
+  const enrichComplaints = (rawList) => {
+    return rawList.map((c) => {
+      // 1. Calculate SLA timer: Reported -> Assigned -> Resolution
+      const createdTime = new Date(c.createdAt || c.created_at || Date.now());
+      const now = new Date();
+      const elapsedMs = now - createdTime;
+      const elapsedHours = Math.floor(elapsedMs / (1000 * 60 * 60));
+      const elapsedMinutes = Math.floor((elapsedMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      let timeElapsedStr = elapsedHours > 0 ? `${elapsedHours}h ${elapsedMinutes}m` : `${elapsedMinutes}m`;
+      if (elapsedHours > 24) {
+        timeElapsedStr = `${Math.floor(elapsedHours / 24)}d ago`;
+      }
+      
+      // SLA Warning flag: if status is 'Submitted' and ticket is older than 4 hours -> SLA approaching delay!
+      const isSlaDelayed = ['submitted', 'ai analyzed'].includes(c.status?.toLowerCase()) && elapsedHours >= 4;
+
+      // 2. Duplicate Check: Scan other complaints to check similarity
+      const possibleDuplicateOf = rawList.find((other) => {
+        if (other.id === c.id) return false;
+        const sameLocation = other.location?.toLowerCase().trim() === c.location?.toLowerCase().trim();
+        const descWordsOther = other.description?.toLowerCase().split(/\s+/) || [];
+        const descWordsSelf = c.description?.toLowerCase().split(/\s+/) || [];
+        const commonWords = descWordsSelf.filter(w => w.length > 3 && descWordsOther.includes(w));
+        const similarity = commonWords.length / Math.max(1, descWordsSelf.length);
+        
+        return (sameLocation && similarity > 0.4) || 
+               (other.title?.toLowerCase().trim() === c.title?.toLowerCase().trim() && sameLocation);
+      });
+
+      // 3. Location Clustering
+      const clusterCount = rawList.filter(
+        (other) => other.location?.toLowerCase().trim() === c.location?.toLowerCase().trim()
+      ).length;
+
+      return {
+        ...c,
+        timeElapsedStr,
+        isSlaDelayed,
+        duplicateOfId: possibleDuplicateOf ? possibleDuplicateOf.id : null,
+        duplicateOfTitle: possibleDuplicateOf ? possibleDuplicateOf.title : null,
+        clusterCount
+      };
+    });
+  };
+
+  const enrichedComplaints = enrichComplaints(complaints);
+
   const addComplaint = async (newComplaint) => {
     setComplaints((prev) => {
       const updated = [newComplaint, ...prev];
@@ -43,10 +91,18 @@ function App() {
     await insertComplaint(newComplaint);
   };
 
-  const updateComplaintStatus = async (ticketId, nextStatus) => {
+  const updateComplaintStatus = async (ticketId, nextStatus, resolutionMeta = null) => {
     setComplaints((prev) => {
       const updated = prev.map((c) => 
-        c.id === ticketId ? { ...c, status: nextStatus, updatedAt: new Date().toISOString() } : c
+        c.id === ticketId 
+          ? { 
+              ...c, 
+              status: nextStatus, 
+              updatedAt: new Date().toISOString(),
+              resolutionNote: resolutionMeta?.resolutionNote || c.resolutionNote,
+              resolutionDate: resolutionMeta?.resolutionDate || (nextStatus === 'Resolved' ? new Date().toISOString() : c.resolutionDate)
+            } 
+          : c
       );
       localStorage.setItem('citymind_complaints', JSON.stringify(updated));
       return updated;
@@ -90,7 +146,7 @@ function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
             >
-              <Citizen complaints={complaints} addComplaint={addComplaint} setView={setView} />
+              <Citizen complaints={enrichedComplaints} addComplaint={addComplaint} setView={setView} />
             </motion.div>
           )}
           {view === 'authority' && (
@@ -102,7 +158,7 @@ function App() {
               transition={{ duration: 0.25 }}
             >
               <Authority 
-                complaints={complaints} 
+                complaints={enrichedComplaints} 
                 updateComplaintStatus={updateComplaintStatus}
                 updateComplaintCategory={updateComplaintCategory}
                 setView={setView} 

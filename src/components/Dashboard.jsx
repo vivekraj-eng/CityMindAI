@@ -13,11 +13,19 @@ import {
   FolderOpen
 } from 'lucide-react';
 
-export default function Dashboard({ complaints, updateComplaintStatus, updateComplaintCategory }) {
-  const [selectedId, setSelectedId] = useState(complaints[0]?.id || null);
+export default function Dashboard({ complaints, updateComplaintStatus, updateComplaintCategory, preselectedId = null }) {
+  const [selectedId, setSelectedId] = useState(preselectedId || complaints[0]?.id || null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [resolutionInput, setResolutionInput] = useState('');
+  const [showProofForm, setShowProofForm] = useState(false);
+
+  useEffect(() => {
+    if (preselectedId) {
+      setSelectedId(preselectedId);
+    }
+  }, [preselectedId]);
 
   // AI advisory state
   const [aiLoading, setAiLoading] = useState(false);
@@ -48,6 +56,24 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
 
     fetchSuggestion();
   }, [selectedId]);
+
+  const handleStatusChange = (statusVal) => {
+    if (statusVal === 'Resolved') {
+      setShowProofForm(true);
+      setResolutionInput(selectedTicket?.resolutionNote || '');
+    } else {
+      setShowProofForm(false);
+      updateComplaintStatus(selectedTicket.id, statusVal);
+    }
+  };
+
+  const submitResolutionProof = () => {
+    updateComplaintStatus(selectedTicket.id, 'Resolved', {
+      resolutionNote: resolutionInput || 'Resolved by city command operations.',
+      resolutionDate: new Date().toISOString()
+    });
+    setShowProofForm(false);
+  };
 
   // Filter complaints
   const filteredComplaints = complaints.filter((c) => {
@@ -171,12 +197,12 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
               </div>
 
               {/* Dynamic Action Controls */}
-              <div className="inspector-controls-grid">
+              <div className="inspector-controls-grid" style={{ marginBottom: showProofForm ? '8px' : '20px' }}>
                 <div className="control-group">
                   <span className="section-label">Resolution Status</span>
                   <select
                     value={selectedTicket.status}
-                    onChange={(e) => updateComplaintStatus(selectedTicket.id, e.target.value)}
+                    onChange={(e) => handleStatusChange(e.target.value)}
                     className="admin-select select-status"
                   >
                     <option value="Submitted">Submitted</option>
@@ -203,6 +229,47 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
                   </select>
                 </div>
               </div>
+
+              {showProofForm && (
+                <div className="inspector-section" style={{ border: '1px solid rgba(46, 125, 50, 0.2)', padding: '12px', borderRadius: '4px', background: 'rgba(46, 125, 50, 0.02)', marginBottom: '16px' }}>
+                  <span className="section-label" style={{ color: '#2e7d32', fontWeight: '700' }}>Resolution Proof Details</span>
+                  <textarea
+                    rows="2"
+                    placeholder="Enter resolution notes, crew directives or evidence links..."
+                    value={resolutionInput}
+                    onChange={(e) => setResolutionInput(e.target.value)}
+                    style={{ border: '1px solid rgba(46, 125, 50, 0.3)', marginTop: '6px', width: '100%', padding: '8px', background: 'var(--surface-elevated)', color: 'var(--text-primary)', borderRadius: '4px' }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                    <button 
+                      onClick={submitResolutionProof}
+                      className="btn btn-primary"
+                      style={{ fontSize: '11px', padding: '6px 12px', background: '#2e7d32', borderColor: '#2e7d32', color: '#FFFFFF' }}
+                    >
+                      Save & Resolve
+                    </button>
+                    <button 
+                      onClick={() => setShowProofForm(false)}
+                      className="btn btn-secondary"
+                      style={{ fontSize: '11px', padding: '6px 12px' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {selectedTicket.status === 'Resolved' && !showProofForm && (
+                <div className="inspector-section" style={{ background: 'rgba(46, 125, 50, 0.04)', padding: '12px', borderRadius: '4px', border: '1px solid rgba(46, 125, 50, 0.15)', marginBottom: '16px' }}>
+                  <span className="section-label" style={{ color: '#2e7d32', fontWeight: '700' }}>Archived Resolution Proof</span>
+                  <p style={{ fontSize: '12px', fontStyle: 'italic', marginTop: '4px', color: 'var(--text-primary)' }}>
+                    "{selectedTicket.resolutionNote || 'Municipal action marked resolved.'}"
+                  </p>
+                  <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Closed on: {selectedTicket.resolutionDate ? new Date(selectedTicket.resolutionDate).toLocaleDateString() : new Date(selectedTicket.updatedAt).toLocaleDateString()}
+                  </span>
+                </div>
+              )}
 
               {/* Gemini AI Triage Report Details */}
               <div className="inspector-section-ai-report">
