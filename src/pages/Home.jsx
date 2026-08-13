@@ -64,8 +64,9 @@ export default function Home({ setView }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
           >
-            AI that understands <br />
-            <span className="gradient-text-alt">your city.</span>
+            Report civic problems. <br />
+            Let AI route them. <br />
+            <span className="gradient-text-alt">Resolve them.</span>
           </motion.h1>
 
           <motion.p 
@@ -74,7 +75,7 @@ export default function Home({ setView }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
           >
-            CityMindAI transforms citizen complaints into actionable intelligence, automatically identifying issues, prioritizing them, and routing them to the right authority.
+            CityMindAI transforms citizen complaints into actionable intelligence—instantly triaging categories, prioritizing urgency, and routing cases to the right municipality departments.
           </motion.p>
 
           <motion.div 
