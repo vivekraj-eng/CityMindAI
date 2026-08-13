@@ -274,7 +274,7 @@ export default function MapView({ complaints, onSelectTicket }) {
     if (!mapInstanceRef.current || !window.google) return;
 
     // 1. Clear previous markers
-    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current.forEach(m => m && typeof m.setMap === 'function' && m.setMap(null));
     markersRef.current = [];
 
     // 2. Fetch clusters
@@ -455,9 +455,13 @@ export default function MapView({ complaints, onSelectTicket }) {
   // Unmount Cleanup
   useEffect(() => {
     return () => {
-      markersRef.current.forEach(m => m.setMap(null));
-      if (currentLocationMarkerRef.current) currentLocationMarkerRef.current.setMap(null);
-      if (accuracyCircleRef.current) accuracyCircleRef.current.setMap(null);
+      markersRef.current.forEach(m => m && typeof m.setMap === 'function' && m.setMap(null));
+      if (currentLocationMarkerRef.current && typeof currentLocationMarkerRef.current.setMap === 'function') {
+        currentLocationMarkerRef.current.setMap(null);
+      }
+      if (accuracyCircleRef.current && typeof accuracyCircleRef.current.setMap === 'function') {
+        accuracyCircleRef.current.setMap(null);
+      }
     };
   }, []);
 
