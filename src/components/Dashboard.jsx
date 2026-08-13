@@ -103,9 +103,12 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
                   onChange={(e) => setFilterStatus(e.target.value)}
                 >
                   <option value="All">All Statuses</option>
-                  <option value="Pending">Pending</option>
+                  <option value="Submitted">Submitted</option>
+                  <option value="AI Analyzed">AI Analyzed</option>
+                  <option value="Assigned">Assigned</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Resolved">Resolved</option>
+                  <option value="Pending">Pending Review</option>
                 </select>
               </div>
             </div>
@@ -160,6 +163,11 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
               <div className="inspector-section">
                 <span className="section-label">Citizen Statement</span>
                 <p className="description-text">{selectedTicket.description}</p>
+                {selectedTicket.image && (
+                  <div className="inspector-image-box" style={{ marginTop: '12px', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                    <img src={selectedTicket.image} alt="Reported Scene" style={{ width: '100%', maxHeight: '200px', objectFit: 'cover', display: 'block' }} />
+                  </div>
+                )}
               </div>
 
               {/* Dynamic Action Controls */}
@@ -171,9 +179,12 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
                     onChange={(e) => updateComplaintStatus(selectedTicket.id, e.target.value)}
                     className="admin-select select-status"
                   >
-                    <option value="Pending">Pending Review</option>
-                    <option value="In Progress">Dispatch crew (In Progress)</option>
-                    <option value="Resolved">Mark Resolved</option>
+                    <option value="Submitted">Submitted</option>
+                    <option value="AI Analyzed">AI Analyzed</option>
+                    <option value="Assigned">Assigned</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Resolved">Resolved</option>
+                    {selectedTicket.status === 'Pending' && <option value="Pending">Pending Review</option>}
                   </select>
                 </div>
 

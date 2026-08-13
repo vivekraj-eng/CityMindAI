@@ -2521,7 +2521,10 @@
   border: 1px solid;
 }
 
-.status-badge-visual.status-pending {
+.status-badge-visual.status-pending,
+.status-badge-visual.status-submitted,
+.status-badge-visual.status-ai-analyzed,
+.status-badge-visual.status-assigned {
   background: rgba(193, 133, 38, 0.08);
   color: #c18526;
   border-color: rgba(193, 133, 38, 0.2);

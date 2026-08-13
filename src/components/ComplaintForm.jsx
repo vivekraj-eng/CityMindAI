@@ -9,14 +9,49 @@ export default function ComplaintForm({ addComplaint }) {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Auto-Detect');
   
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisStep, setAnalysisStep] = useState('');
-  const [latestAnalysis, setLatestAnalysis] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [lastSubmittedText, setLastSubmittedText] = useState('');
+  const [formError, setFormError] = useState('');
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 4 * 1024 * 1024) {
+      setFormError("Image upload failure: File size exceeds the 4MB limit.");
+      return;
+    }
+    setFormError('');
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImage(reader.result);
+      setImagePreview(reader.result);
+    };
+    reader.onerror = () => {
+      console.error("Image loading failed.");
+      setFormError("Image upload failure: Failed to read file data.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImagePreview(null);
+    const fileInput = document.getElementById('image-upload');
+    if (fileInput) fileInput.value = '';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !description || !location) return;
+
+    if (description.trim() === lastSubmittedText.trim()) {
+      setFormError("Duplicate submission prevention: This complaint description has already been registered.");
+      return;
+    }
+    setFormError('');
 
     setIsAnalyzing(true);
     setSuccess(false);
@@ -32,12 +67,23 @@ export default function ComplaintForm({ addComplaint }) {
 
     for (let i = 0; i < steps.length; i++) {
       setAnalysisStep(steps[i]);
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      await new Promise((resolve) => setTimeout(resolve, 600));
     }
 
     try {
+      // Parse image if present
+      let imageData = null;
+      if (image) {
+        const parts = image.split(',');
+        if (parts.length === 2) {
+          const mimeType = parts[0].match(/:(.*?);/)?.[1] || 'image/jpeg';
+          const base64Data = parts[1];
+          imageData = { mimeType, base64Data };
+        }
+      }
+
       // Call Gemini analysis
-      const aiResponse = await analyzeComplaint(title, description, location, category === 'Auto-Detect' ? null : category);
+      const aiResponse = await analyzeComplaint(title, description, location, category === 'Auto-Detect' ? null : category, imageData);
       
       const newTicket = {
         id: Date.now(),
@@ -48,7 +94,7 @@ export default function ComplaintForm({ addComplaint }) {
         urgency: aiResponse.urgency,
         priority: aiResponse.urgency,
         department: aiResponse.category,
-        status: 'Pending',
+        status: 'Submitted', // Start with Submitted status!
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         aiSummary: aiResponse.aiSummary,
@@ -56,12 +102,14 @@ export default function ComplaintForm({ addComplaint }) {
         sentiment: aiResponse.sentiment,
         detectedIssue: aiResponse.detectedIssue,
         recommendedAction: aiResponse.recommendedAction,
-        confidence: aiResponse.confidence
+        confidence: aiResponse.confidence,
+        image: imagePreview // Store the preview base64 reference locally
       };
 
       // Add to global state
       addComplaint(newTicket);
       
+      setLastSubmittedText(description);
       setLatestAnalysis(aiResponse);
       setSuccess(true);
 
@@ -70,8 +118,13 @@ export default function ComplaintForm({ addComplaint }) {
       setLocation('');
       setDescription('');
       setCategory('Auto-Detect');
+      setImage(null);
+      setImagePreview(null);
+      const fileInput = document.getElementById('image-upload');
+      if (fileInput) fileInput.value = '';
     } catch (err) {
       console.error(err);
+      setFormError("Failed to submit issue. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -143,6 +196,45 @@ export default function ComplaintForm({ addComplaint }) {
             required
           ></textarea>
         </div>
+
+        <div className="form-group">
+          <label htmlFor="image-upload" className="file-input-label">Attach Photo (Optional)</label>
+          <div className="file-input-wrapper">
+            <input
+              type="file"
+              id="image-upload"
+              accept="image/*"
+              onChange={handleImageChange}
+              disabled={isAnalyzing}
+              className="file-input-control"
+            />
+          </div>
+          {imagePreview && (
+            <div className="image-preview-container" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px' }}>
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="uploaded-image-preview" 
+                style={{ width: '64px', height: '64px', borderRadius: '4px', objectFit: 'cover', border: '1px solid var(--glass-border)' }} 
+              />
+              <button 
+                type="button" 
+                className="btn-remove-image" 
+                onClick={handleRemoveImage}
+                style={{ fontSize: '12px', color: '#B03A2E', cursor: 'pointer', border: 'none', background: 'none', textDecoration: 'underline' }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+        </div>
+
+        {formError && (
+          <div className="form-error-alert" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: 'rgba(176, 58, 46, 0.08)', border: '1px solid rgba(176, 58, 46, 0.2)', borderRadius: '4px', color: '#B03A2E', fontSize: '13px', margin: '14px 0' }}>
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <span>{formError}</span>
+          </div>
+        )}
 
         <button
           type="submit"

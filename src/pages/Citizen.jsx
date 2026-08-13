@@ -65,9 +65,28 @@ export default function Citizen({ complaints, addComplaint, setView }) {
         return <span className="status-badge status-resolved"><CheckCircle2 size={12} /> Resolved</span>;
       case 'in progress':
         return <span className="status-badge status-progress"><Clock size={12} /> In Progress</span>;
+      case 'submitted':
+        return <span className="status-badge status-pending"><AlertCircle size={12} /> Submitted</span>;
+      case 'ai analyzed':
+        return <span className="status-badge status-pending"><Sparkles size={12} /> AI Analyzed</span>;
+      case 'assigned':
+        return <span className="status-badge status-pending"><CheckCircle2 size={12} /> Assigned</span>;
       default:
-        return <span className="status-badge status-pending"><AlertCircle size={12} /> Pending</span>;
+        return <span className="status-badge status-pending"><AlertCircle size={12} /> Pending Review</span>;
     }
+  };
+
+  const getStepClass = (currentStatus, stepNumber) => {
+    const statusMap = {
+      'submitted': 1,
+      'ai analyzed': 2,
+      'assigned': 3,
+      'pending': 3,
+      'in progress': 4,
+      'resolved': 5
+    };
+    const currentStep = statusMap[currentStatus?.toLowerCase()] || 3;
+    return stepNumber <= currentStep ? 'step-completed' : 'step-pending';
   };
 
   const getUrgencyBadge = (urgency) => {
@@ -245,41 +264,41 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                         <div className="status-tracker-section inline-tracker">
                           <span className="tracker-header">Resolution Stepper Timeline</span>
                           <div className="stepper-visual">
-                            <div className="step-item step-completed">
+                            <div className={`step-item ${getStepClass(trackResult.status, 1)}`}>
                               <div className="step-circle"><CheckCircle2 size={14} /></div>
                               <div className="step-text-col">
                                 <span className="step-name">Submitted</span>
                                 <span className="step-time">{formatDate(trackResult.createdAt)}</span>
                               </div>
                             </div>
-                            <div className="step-item step-completed">
+                            <div className={`step-item ${getStepClass(trackResult.status, 2)}`}>
                               <div className="step-circle"><Sparkles size={14} className="text-cyan" /></div>
                               <div className="step-text-col">
                                 <span className="step-name">AI Analyzed</span>
                                 <span className="step-time">Auto-Triage complete</span>
                               </div>
                             </div>
-                            <div className="step-item step-completed">
+                            <div className={`step-item ${getStepClass(trackResult.status, 3)}`}>
                               <div className="step-circle"><CheckCircle2 size={14} /></div>
                               <div className="step-text-col">
                                 <span className="step-name">Assigned</span>
                                 <span className="step-time">Routed to {trackResult.category} Dept</span>
                               </div>
                             </div>
-                            <div className={`step-item ${trackResult.status === 'In Progress' || trackResult.status === 'Resolved' ? 'step-completed' : 'step-pending'}`}>
+                            <div className={`step-item ${getStepClass(trackResult.status, 4)}`}>
                               <div className="step-circle">
-                                {trackResult.status === 'In Progress' ? <Clock size={14} className="spin-slow" /> : <CheckCircle2 size={14} />}
+                                {trackResult.status?.toLowerCase() === 'in progress' ? <Clock size={14} className="spin-slow" /> : <CheckCircle2 size={14} />}
                               </div>
                               <div className="step-text-col">
                                 <span className="step-name">In Progress</span>
-                                <span className="step-time">{trackResult.status === 'Pending' ? 'Awaiting municipal crew' : 'Response team on-site'}</span>
+                                <span className="step-time">{['pending', 'submitted', 'ai analyzed', 'assigned'].includes(trackResult.status?.toLowerCase()) ? 'Awaiting municipal crew' : 'Response team on-site'}</span>
                               </div>
                             </div>
-                            <div className={`step-item ${trackResult.status === 'Resolved' ? 'step-completed' : 'step-pending'}`}>
+                            <div className={`step-item ${getStepClass(trackResult.status, 5)}`}>
                               <div className="step-circle"><CheckCircle2 size={14} /></div>
                               <div className="step-text-col">
                                 <span className="step-name">Resolved</span>
-                                <span className="step-time">{trackResult.status === 'Resolved' ? 'Resolution verified by City Operations' : 'Awaiting completion'}</span>
+                                <span className="step-time">{trackResult.status?.toLowerCase() === 'resolved' ? 'Resolution verified by City Operations' : 'Awaiting completion'}</span>
                               </div>
                             </div>
                           </div>
@@ -326,7 +345,7 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                 <span className="tracker-header">Resolution Stepper</span>
                 <div className="stepper-visual">
                   {/* Step 1: Submit */}
-                  <div className="step-item step-completed">
+                  <div className={`step-item ${getStepClass(selectedComplaint.status, 1)}`}>
                     <div className="step-circle"><CheckCircle2 size={14} /></div>
                     <div className="step-text-col">
                       <span className="step-name">Issue Registered</span>
@@ -334,7 +353,7 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                     </div>
                   </div>
                   {/* Step 2: Triage */}
-                  <div className="step-item step-completed">
+                  <div className={`step-item ${getStepClass(selectedComplaint.status, 2)}`}>
                     <div className="step-circle"><Sparkles size={14} className="text-cyan" /></div>
                     <div className="step-text-col">
                       <span className="step-name">AI Triage Completed</span>
@@ -342,7 +361,7 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                     </div>
                   </div>
                   {/* Step 3: Routing */}
-                  <div className="step-item step-completed">
+                  <div className={`step-item ${getStepClass(selectedComplaint.status, 3)}`}>
                     <div className="step-circle"><CheckCircle2 size={14} /></div>
                     <div className="step-text-col">
                       <span className="step-name">Routed to Department</span>
@@ -350,21 +369,21 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                     </div>
                   </div>
                   {/* Step 4: Dispatch */}
-                  <div className={`step-item ${selectedComplaint.status === 'In Progress' || selectedComplaint.status === 'Resolved' ? 'step-completed' : 'step-pending'}`}>
+                  <div className={`step-item ${getStepClass(selectedComplaint.status, 4)}`}>
                     <div className="step-circle">
-                      {selectedComplaint.status === 'In Progress' ? <Clock size={14} className="spin-slow" /> : <CheckCircle2 size={14} />}
+                      {selectedComplaint.status?.toLowerCase() === 'in progress' ? <Clock size={14} className="spin-slow" /> : <CheckCircle2 size={14} />}
                     </div>
                     <div className="step-text-col">
                       <span className="step-name">Municipal Work Dispatch</span>
-                      <span className="step-time">{selectedComplaint.status === 'Pending' ? 'Awaiting Dispatch' : 'Crew Dispatched'}</span>
+                      <span className="step-time">{['pending', 'submitted', 'ai analyzed', 'assigned'].includes(selectedComplaint.status?.toLowerCase()) ? 'Awaiting Dispatch' : 'Crew Dispatched'}</span>
                     </div>
                   </div>
                   {/* Step 5: Resolved */}
-                  <div className={`step-item ${selectedComplaint.status === 'Resolved' ? 'step-completed' : 'step-pending'}`}>
+                  <div className={`step-item ${getStepClass(selectedComplaint.status, 5)}`}>
                     <div className="step-circle"><CheckCircle2 size={14} /></div>
                     <div className="step-text-col">
                       <span className="step-name">Resolved</span>
-                      <span className="step-time">{selectedComplaint.status === 'Resolved' ? 'Completed & Verified' : 'Awaiting Completion'}</span>
+                      <span className="step-time">{selectedComplaint.status?.toLowerCase() === 'resolved' ? 'Completed & Verified' : 'Awaiting Completion'}</span>
                     </div>
                   </div>
                 </div>
@@ -378,6 +397,11 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                   <MapPin size={14} className="text-cyan" />
                   <span>{selectedComplaint.location}</span>
                 </div>
+                {selectedComplaint.image && (
+                  <div className="drawer-image-box" style={{ marginTop: '16px', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+                    <img src={selectedComplaint.image} alt="Grievance Incident" style={{ width: '100%', maxHeight: '220px', objectFit: 'cover', display: 'block' }} />
+                  </div>
+                )}
               </div>
 
               {/* Gemini AI Extract details */}

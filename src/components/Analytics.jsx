@@ -30,7 +30,7 @@ export default function Analytics({ complaints }) {
   // Counts by status
   const resolvedCount = complaints.filter(c => c.status === 'Resolved').length;
   const inProgressCount = complaints.filter(c => c.status === 'In Progress').length;
-  const pendingCount = complaints.filter(c => c.status === 'Pending').length;
+  const pendingCount = complaints.filter(c => !['Resolved', 'In Progress'].includes(c.status)).length;
   const openCount = total - resolvedCount;
 
   const resolutionRate = total > 0 ? Math.round((resolvedCount / total) * 100) : 0;

@@ -12,39 +12,55 @@ function App() {
   const [view, setView] = useState('home');
   const [complaints, setComplaints] = useState(mockComplaints);
 
-  // Load complaints from Supabase on mount
+  // Load complaints from Supabase with localStorage backup on mount
   useEffect(() => {
     const loadData = async () => {
       const data = await fetchComplaints();
       if (data !== null) {
         setComplaints(data);
+        localStorage.setItem('citymind_complaints', JSON.stringify(data));
+      } else {
+        const localData = localStorage.getItem('citymind_complaints');
+        if (localData) {
+          try {
+            setComplaints(JSON.parse(localData));
+          } catch (e) {
+            console.error("Failed to parse localStorage complaints:", e);
+          }
+        }
       }
     };
     loadData();
   }, []);
 
   const addComplaint = async (newComplaint) => {
-    // Optimistic local state update
-    setComplaints((prev) => [newComplaint, ...prev]);
-    // Save backend representation
+    setComplaints((prev) => {
+      const updated = [newComplaint, ...prev];
+      localStorage.setItem('citymind_complaints', JSON.stringify(updated));
+      return updated;
+    });
     await insertComplaint(newComplaint);
   };
 
   const updateComplaintStatus = async (ticketId, nextStatus) => {
-    // Optimistic local update
-    setComplaints((prev) =>
-      prev.map((c) => (c.id === ticketId ? { ...c, status: nextStatus } : c))
-    );
-    // Persist to Supabase
+    setComplaints((prev) => {
+      const updated = prev.map((c) => 
+        c.id === ticketId ? { ...c, status: nextStatus, updatedAt: new Date().toISOString() } : c
+      );
+      localStorage.setItem('citymind_complaints', JSON.stringify(updated));
+      return updated;
+    });
     await updateComplaint(ticketId, { status: nextStatus });
   };
 
   const updateComplaintCategory = async (ticketId, nextCategory) => {
-    // Optimistic local update
-    setComplaints((prev) =>
-      prev.map((c) => (c.id === ticketId ? { ...c, category: nextCategory } : c))
-    );
-    // Persist to Supabase
+    setComplaints((prev) => {
+      const updated = prev.map((c) => 
+        c.id === ticketId ? { ...c, category: nextCategory, updatedAt: new Date().toISOString() } : c
+      );
+      localStorage.setItem('citymind_complaints', JSON.stringify(updated));
+      return updated;
+    });
     await updateComplaint(ticketId, { category: nextCategory });
   };
 

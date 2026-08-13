@@ -19,7 +19,7 @@ const getMockAnalysis = (categoryPreference) => {
   };
 };
 
-export const analyzeComplaint = async (title, description, location, categoryPreference = null) => {
+export const analyzeComplaint = async (title, description, location, categoryPreference = null, imageData = null) => {
   const apiKey = getApiKey();
   
   if (!apiKey) {
@@ -36,6 +36,7 @@ Analyze the following citizen complaint submission:
 - Location: "${location}"
 - Description: "${description}"
 ${categoryPreference ? `- User Selected Category Preference: "${categoryPreference}"` : ''}
+${imageData ? '- A photo of the reported incident is attached for visual inspection.' : ''}
 
 Evaluate the issue and return a JSON object with the following fields:
 {
@@ -50,6 +51,19 @@ Evaluate the issue and return a JSON object with the following fields:
 `;
 
   try {
+    const parts = [
+      { text: prompt }
+    ];
+
+    if (imageData) {
+      parts.push({
+        inlineData: {
+          mimeType: imageData.mimeType,
+          data: imageData.base64Data
+        }
+      });
+    }
+
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
       headers: {
@@ -58,11 +72,7 @@ Evaluate the issue and return a JSON object with the following fields:
       body: JSON.stringify({
         contents: [
           {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
+            parts: parts
           }
         ],
         generationConfig: {
