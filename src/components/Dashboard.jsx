@@ -33,6 +33,31 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
 
   const selectedTicket = complaints.find(c => c.id === selectedId);
 
+  // Compute related complaints
+  const relatedTickets = selectedTicket ? complaints.filter((other) => {
+    if (other.id === selectedTicket.id) return false;
+    
+    // Check coordinate distance if lat/lng are present
+    let isNearby = false;
+    if (selectedTicket.latitude && selectedTicket.longitude && other.latitude && other.longitude) {
+      const latDiff = Math.abs(parseFloat(selectedTicket.latitude) - parseFloat(other.latitude));
+      const lngDiff = Math.abs(parseFloat(selectedTicket.longitude) - parseFloat(other.longitude));
+      isNearby = latDiff < 0.005 && lngDiff < 0.005; // ~500m
+    } else {
+      // Fallback: Check if address has common street/location strings
+      isNearby = other.location?.toLowerCase().trim() === selectedTicket.location?.toLowerCase().trim();
+    }
+    
+    // Check keyword similarity or same category
+    const sameCategory = other.category === selectedTicket.category;
+    const descWordsOther = other.description?.toLowerCase().split(/\s+/) || [];
+    const descWordsSelf = selectedTicket.description?.toLowerCase().split(/\s+/) || [];
+    const commonWords = descWordsSelf.filter(w => w.length > 4 && descWordsOther.includes(w));
+    const similarity = commonWords.length / Math.max(1, descWordsSelf.length);
+    
+    return (isNearby && similarity > 0.25) || (isNearby && sameCategory);
+  }) : [];
+
   // Fetch AI suggested solution when selected ticket changes
   useEffect(() => {
     if (!selectedTicket) {
@@ -166,9 +191,24 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
         {selectedTicket ? (
           <div className="inspector-panel-card">
             <div className="inspector-header">
-              <div className="ticket-meta">
+              <div className="ticket-meta" style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
                 <span className="ticket-id-tag">TICKET #{selectedTicket.id.toString().slice(-6)}</span>
-                <span className="timestamp">{new Date(selectedTicket.createdAt).toLocaleDateString()}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+                  <span className="timestamp">{new Date(selectedTicket.createdAt).toLocaleDateString()}</span>
+                  {selectedTicket.timeElapsedStr && (
+                    <span style={{ 
+                      fontSize: '11px', 
+                      background: selectedTicket.isSlaDelayed ? 'rgba(185, 101, 75, 0.1)' : 'var(--surface-elevated)', 
+                      color: selectedTicket.isSlaDelayed ? '#B9654B' : 'var(--text-secondary)',
+                      fontWeight: selectedTicket.isSlaDelayed ? '700' : '400',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      border: selectedTicket.isSlaDelayed ? '1px solid rgba(185,101,75,0.2)' : '1px solid var(--glass-border)'
+                    }}>
+                      Elapsed: {selectedTicket.timeElapsedStr} {selectedTicket.isSlaDelayed ? '(DELAYED)' : ''}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="inspector-badge-row">
                 <span className={`status-badge-visual status-${selectedTicket.status.toLowerCase().replace(' ', '-')}`}>
@@ -322,6 +362,33 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
                     <p className="ai-directive-text">{aiSolution}</p>
                   )}
                 </div>
+              </div>
+
+              {/* Related Complaints List Section */}
+              <div className="inspector-section-related-complaints" style={{ border: '1px solid var(--glass-border)', padding: '16px', borderRadius: '6px', background: 'var(--surface-color)', marginTop: '20px' }}>
+                <span className="section-label" style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>
+                  Related Complaints ({relatedTickets.length})
+                </span>
+                {relatedTickets.length === 0 ? (
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>No overlapping or nearby related grievances detected.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {relatedTickets.map((ticket) => (
+                      <div 
+                        key={ticket.id} 
+                        style={{ padding: '8px 10px', background: 'var(--surface-elevated)', borderRadius: '4px', borderLeft: '3px solid var(--accent-cyan)', fontSize: '12px' }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '600', color: 'var(--text-primary)' }}>
+                          <span>{ticket.title}</span>
+                          <span style={{ color: 'var(--text-muted)' }}>#{ticket.id.toString().slice(-4)}</span>
+                        </div>
+                        <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: '11px' }}>
+                          Location: {ticket.location} | Status: {ticket.status}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

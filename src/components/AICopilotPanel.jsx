@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Sparkles, ShieldAlert, Cpu, AlertCircle, CheckCircle, Info, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Sparkles, ShieldAlert, Cpu, CheckCircle, Info, RefreshCw, AlertTriangle } from 'lucide-react';
+import { generateCopilotSummary } from '../services/gemini';
 
 export default function AICopilotPanel({ complaints, updateComplaintStatus }) {
-  const [loadingSuggestion, setLoadingSuggestion] = useState(false);
-  const [selectedDuplicate, setSelectedDuplicate] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   // Group duplicate tickets
   const duplicates = complaints.filter(c => c.duplicateOfId && c.status !== 'Resolved');
@@ -18,8 +19,23 @@ export default function AICopilotPanel({ complaints, updateComplaintStatus }) {
   });
   const clusters = Object.entries(locationGroups).filter(([_, list]) => list.length >= 2);
 
+  const fetchSummary = async () => {
+    setLoadingSummary(true);
+    try {
+      const res = await generateCopilotSummary(complaints);
+      setSummary(res);
+    } catch (err) {
+      console.error("Failed to load Copilot summary:", err);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSummary();
+  }, [complaints]);
+
   const handleResolveDuplicates = (duplicateId) => {
-    // Resolve duplicate tickets at once by linking their status to resolved
     updateComplaintStatus(duplicateId, 'Resolved', {
       resolutionNote: 'Closed as duplicate report by Gemini Co-pilot.',
       resolutionDate: new Date().toISOString()
@@ -33,6 +49,14 @@ export default function AICopilotPanel({ complaints, updateComplaintStatus }) {
           <h2 style={{ fontSize: '24px', fontWeight: '700', fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', marginBottom: '4px' }}>AI Civic Co-pilot Advisory Console</h2>
           <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)' }}>Automated city-wide alerts, cluster detection, and duplicate grievance routing directives.</p>
         </div>
+        <button 
+          onClick={fetchSummary}
+          disabled={loadingSummary}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '4px', fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer' }}
+        >
+          <RefreshCw size={12} className={loadingSummary ? 'animate-spin' : ''} />
+          <span>Refresh Analysis</span>
+        </button>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '24px', alignItems: 'start' }}>
@@ -119,30 +143,74 @@ export default function AICopilotPanel({ complaints, updateComplaintStatus }) {
 
         </div>
 
-        {/* Right pane: General Telemetry instructions */}
-        <div className="list-card-wrapper" style={{ padding: '20px', background: 'var(--surface-color)' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={16} className="text-cyan animate-pulse-fast" />
-            <span>Advisory Directives</span>
-          </h3>
-          <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: '1.5', marginBottom: '16px' }}>
-            Our municipal co-pilot utilizes state-of-the-art LLM vector similarity models to verify duplication thresholds, parse coordinates into active clustering grids, and compute workloads.
-          </p>
+        {/* Right pane: Gemini Co-pilot Executive Summary */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          <div className="list-card-wrapper" style={{ padding: '20px', background: 'var(--surface-color)' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={16} className="text-cyan animate-pulse-fast" />
+              <span>Gemini Executive Summary</span>
+            </h3>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <span style={{ color: 'var(--accent-cyan)' }}>✔</span>
-              <span><strong>Duplicate Detection:</strong> Checks for semantic similarities and location overlaps across all active tickets.</span>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <span style={{ color: 'var(--accent-cyan)' }}>✔</span>
-              <span><strong>Cluster Analysis:</strong> Aggregates tickets situated within a 150m grid box area to optimize municipal dispatch schedules.</span>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <span style={{ color: 'var(--accent-cyan)' }}>✔</span>
-              <span><strong>SLA Escalation Alerts:</strong> Flags issues that have exceeded standard response limits (4 hours for Critical, 24 hours for Low).</span>
+            {loadingSummary ? (
+              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <span className="spinner" style={{ display: 'inline-block', border: '2px solid rgba(185,101,75,0.1)', borderTopColor: '#B9654B', borderRadius: '50%', width: '18px', height: '18px', animation: 'spin-loading 0.8s linear infinite', marginBottom: '8px' }}></span>
+                <p style={{ fontSize: '12px' }}>Synthesizing active civic telemetry...</p>
+              </div>
+            ) : summary ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '600' }}>Major Issue Cluster</span>
+                  <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', margin: '2px 0 0 0' }}>{summary.majorIssue}</p>
+                </div>
+
+                <div style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '600' }}>Critical Alerts Pending</span>
+                  <p style={{ fontSize: '14px', fontWeight: '700', color: '#B9654B', margin: '2px 0 0 0' }}>{summary.criticalCount} Active Cases</p>
+                </div>
+
+                <div style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '600' }}>Primary Hotspot Sector</span>
+                  <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', margin: '2px 0 0 0' }}>{summary.hotspot}</p>
+                </div>
+
+                <div style={{ borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '600' }}>Busiest Department</span>
+                  <p style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', margin: '2px 0 0 0' }}>{summary.busiestDepartment}</p>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: '600' }}>Recommended Operational Priorities</span>
+                  <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: '4px 0 0 0', lineHeight: '1.4' }}>{summary.recommendedPriority}</p>
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <AlertTriangle size={24} className="text-muted" style={{ marginBottom: '8px' }} />
+                <p style={{ fontSize: '12px' }}>Summary generation unavailable.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Advisory Directives */}
+          <div className="list-card-wrapper" style={{ padding: '20px' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '12px' }}>Advisory Directives</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ color: 'var(--accent-cyan)' }}>✔</span>
+                <span><strong>Duplicate Detection:</strong> Checks for semantic similarities and location overlaps across all active tickets.</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ color: 'var(--accent-cyan)' }}>✔</span>
+                <span><strong>Cluster Analysis:</strong> Aggregates tickets situated within a 150m grid box area to optimize municipal dispatch schedules.</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ color: 'var(--accent-cyan)' }}>✔</span>
+                <span><strong>SLA Escalation Alerts:</strong> Flags issues that have exceeded standard response limits (4 hours for Critical, 24 hours for Low).</span>
+              </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>

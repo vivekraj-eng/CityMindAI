@@ -106,6 +106,26 @@ export default function Overview({ complaints, onNavigateToTab, onSelectTicket }
 
   const insights = getCoPilotInsights();
 
+  const criticalAlertsList = complaints.filter(
+    c => (c.urgency?.toLowerCase() === 'high' || c.urgency?.toLowerCase() === 'critical') && c.status !== 'Resolved'
+  );
+
+  // Group active complaints to detect locations with multiple complaints (Hotspots)
+  const getActiveHotspots = () => {
+    const counts = {};
+    complaints.forEach(c => {
+      if (c.status !== 'Resolved') {
+        const key = c.location?.toLowerCase().trim() || 'unknown';
+        if (!counts[key]) {
+          counts[key] = { location: c.location, count: 0, category: c.category };
+        }
+        counts[key].count += 1;
+      }
+    });
+    return Object.values(counts).filter(h => h.count >= 2).sort((a, b) => b.count - a.count);
+  };
+  const hotspots = getActiveHotspots();
+
   // Top 6 priority tickets (Critical/High first, then older tickets)
   const priorityQueue = [...complaints]
     .filter(c => c.status !== 'Resolved')
@@ -132,6 +152,37 @@ export default function Overview({ complaints, onNavigateToTab, onSelectTicket }
           <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>{new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
         </div>
       </div>
+
+      {/* Critical Alerts Banner */}
+      {criticalAlertsList.length > 0 && (
+        <div className="critical-alerts-banner" style={{ border: '1px solid rgba(185, 101, 75, 0.25)', borderRadius: '8px', padding: '16px', background: 'rgba(185, 101, 75, 0.04)', marginBottom: '24px' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700', color: '#B9654B', margin: '0 0 12px 0', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <AlertCircle size={15} />
+            <span>Critical Dispatch Alerts ({criticalAlertsList.length})</span>
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {criticalAlertsList.map((alert) => (
+              <div key={alert.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--surface-color)', padding: '10px 14px', borderRadius: '4px', borderLeft: '3.5px solid #B9654B', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', borderRight: '1px solid var(--glass-border)', fontSize: '12.5px', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ flex: '1', minWidth: '200px' }}>
+                  <span style={{ fontWeight: '700', color: 'var(--text-primary)', display: 'block', marginBottom: '2px' }}>{alert.title}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>Loc: {alert.location} | Dept: {alert.category}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', background: 'rgba(185,101,75,0.08)', color: '#B9654B', padding: '2px 6px', borderRadius: '4px', fontWeight: '600' }}>Elapsed: {alert.timeElapsedStr || '0m'}</span>
+                  <span style={{ fontSize: '11px', background: 'var(--surface-elevated)', color: 'var(--text-secondary)', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--glass-border)' }}>Status: {alert.status}</span>
+                  <button 
+                    onClick={() => onSelectTicket(alert.id)}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '2px' }}
+                  >
+                    <span>Triage</span>
+                    <ArrowRight size={10} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* KPI Stats Grid */}
       <div className="metrics-banner-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '28px' }}>
@@ -283,6 +334,31 @@ export default function Overview({ complaints, onNavigateToTab, onSelectTicket }
         {/* Right Hand side: AI Co-pilot Insights & Department workloads */}
         <div className="overview-pane-right">
           
+          {/* Active Hotspots Box */}
+          <div className="list-card-wrapper" style={{ padding: '20px', marginBottom: '24px', background: 'var(--surface-color)', border: '1px solid var(--glass-border)' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MapPin size={16} className="text-cyan" />
+              <span>Active Hotspots Detected ({hotspots.length})</span>
+            </h3>
+            {hotspots.length === 0 ? (
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>No active spatial incident hotspots detected.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {hotspots.map((spot, idx) => (
+                  <div key={idx} style={{ padding: '10px', background: 'var(--surface-elevated)', borderRadius: '4px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <span style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-primary)', display: 'block' }}>{spot.location}</span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Dominant: {spot.category}</span>
+                    </div>
+                    <span style={{ fontSize: '11px', background: 'rgba(185, 101, 75, 0.08)', color: '#B9654B', padding: '2px 8px', borderRadius: '4px', fontWeight: '700', border: '1px solid rgba(185,101,75,0.15)' }}>
+                      {spot.count} Reports
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* AI Civic Co-pilot Panel */}
           <div className="list-card-wrapper" style={{ padding: '20px', marginBottom: '24px', background: 'var(--surface-color)', border: '1px solid var(--glass-border)' }}>
             <h3 style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>

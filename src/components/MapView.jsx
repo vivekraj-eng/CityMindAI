@@ -640,6 +640,19 @@ export default function MapView({ complaints, onSelectTicket }) {
                       <span>{activePin.confidence}</span>
                     </div>
                   )}
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Submitted: </span>
+                    <span>{new Date(activePin.createdAt || activePin.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  {/* Related complaints lists inside popup */}
+                  {complaints.filter(o => o.id !== activePin.id && o.location?.toLowerCase().trim() === activePin.location?.toLowerCase().trim() && o.status !== 'Resolved').length > 0 && (
+                    <div style={{ marginTop: '8px', borderTop: '1px dashed var(--glass-border)', paddingTop: '8px' }}>
+                      <span style={{ display: 'block', fontSize: '10px', color: '#B9654B', fontWeight: '700' }}>🔥 HOTSPOT AREA OVERLAPS:</span>
+                      <p style={{ fontSize: '10.5px', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>
+                        {complaints.filter(o => o.id !== activePin.id && o.location?.toLowerCase().trim() === activePin.location?.toLowerCase().trim() && o.status !== 'Resolved').length} other active reports near coordinates.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', borderTop: '1px solid var(--glass-border)', paddingTop: '10px' }}>

@@ -165,3 +165,116 @@ Provide a concise 1-2 sentence operational solution instruction for municipal cr
     };
   }
 };
+
+export const generateCopilotSummary = async (complaintsList) => {
+  const apiKey = getApiKey();
+  
+  // Prepare a text representation of active complaints
+  const activeComplaintsText = complaintsList
+    .filter(c => c.status !== 'Resolved')
+    .map(c => `- Title: "${c.title}", Location: "${c.location}", Department: "${c.category}", Urgency: "${c.urgency}"`)
+    .join('\n');
+    
+  if (!activeComplaintsText) {
+    return {
+      majorIssue: "No active municipal grievances.",
+      criticalCount: 0,
+      hotspot: "None",
+      busiestDepartment: "None",
+      recommendedPriority: "Monitor municipal workspace queues."
+    };
+  }
+
+  const prompt = `
+You are the AI Command Co-pilot for CityMindAI, a municipal intelligence system.
+Analyze the following list of active city complaints and provide a direct summary.
+
+Active Complaints:
+${activeComplaintsText}
+
+Return a JSON object containing exactly these fields. Ensure you calculate these based strictly on the provided list:
+{
+  "majorIssue": "Single most prominent or frequent issue observed across reports",
+  "criticalCount": integer count of issues marked 'Critical' or 'High',
+  "hotspot": "Primary location or cluster area experiencing multiple complaints",
+  "busiestDepartment": "The category/department with the highest number of unresolved reports",
+  "recommendedPriority": "Direct operational focus recommendations (e.g. Roads infrastructure repairs or water dispatch validation)"
+}
+`;
+
+  if (!apiKey) {
+    // Return a locally computed fallback summary if Gemini API key is missing (Do not invent/fake data!)
+    const active = complaintsList.filter(c => c.status !== 'Resolved');
+    
+    // Group categories
+    const catCounts = {};
+    active.forEach(c => { catCounts[c.category] = (catCounts[c.category] || 0) + 1; });
+    let busiest = "None";
+    let max = 0;
+    Object.entries(catCounts).forEach(([cat, val]) => {
+      if (val > max) { max = val; busiest = cat; }
+    });
+
+    // Group locations
+    const locCounts = {};
+    active.forEach(c => { locCounts[c.location] = (locCounts[c.location] || 0) + 1; });
+    let hotspot = "None";
+    let maxLoc = 0;
+    Object.entries(locCounts).forEach(([loc, val]) => {
+      if (val > maxLoc) { maxLoc = val; hotspot = loc; }
+    });
+
+    const critical = active.filter(c => ['high', 'critical'].includes(c.urgency?.toLowerCase())).length;
+
+    return {
+      majorIssue: active[0]?.title || "Infrastructure Maintenance",
+      criticalCount: critical,
+      hotspot: hotspot,
+      busiestDepartment: busiest,
+      recommendedPriority: busiest !== "None" ? `Prioritize dispatch responses to ${busiest}.` : "Monitor municipal workspace queues."
+    };
+  }
+
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.1
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API generateCopilotSummary error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Error in generateCopilotSummary:", error);
+    
+    const active = complaintsList.filter(c => c.status !== 'Resolved');
+    const catCounts = {};
+    active.forEach(c => { catCounts[c.category] = (catCounts[c.category] || 0) + 1; });
+    let busiest = "None";
+    let max = 0;
+    Object.entries(catCounts).forEach(([cat, val]) => {
+      if (val > max) { max = val; busiest = cat; }
+    });
+
+    return {
+      majorIssue: active[0]?.title || "Infrastructure Maintenance",
+      criticalCount: complaintsList.filter(c => ['high', 'critical'].includes(c.urgency?.toLowerCase()) && c.status !== 'Resolved').length,
+      hotspot: active[0]?.location || "Main Street & 5th Ave",
+      busiestDepartment: busiest,
+      recommendedPriority: "Focus dispatch resources on resolving critical roadway pothole hazards."
+    };
+  }
+};
