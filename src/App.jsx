@@ -182,10 +182,10 @@ function App() {
     if (currentPath === '/' || currentPath === '/index.html') {
       return <Home setView={customNavigate} />;
     }
-    if (currentPath === '/login') {
+    if (currentPath === '/login' || currentPath === '/authority/login') {
       return <LoginPage setView={customNavigate} setUser={setUser} setCitizenTab={setCitizenTab} />;
     }
-    if (currentPath === '/register') {
+    if (currentPath === '/register' || currentPath === '/signup') {
       return <RegisterPage setView={customNavigate} setUser={setUser} setCitizenTab={setCitizenTab} />;
     }
 
@@ -193,6 +193,9 @@ function App() {
       let tab = 'my-reports';
       if (currentPath === '/reports/track') tab = 'track';
       else if (currentPath === '/reports/notifications') tab = 'notifications';
+      else if (currentPath.startsWith('/reports/')) {
+        tab = currentPath.substring('/reports/'.length);
+      }
 
       return (
         <Citizen 

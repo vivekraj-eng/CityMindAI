@@ -83,11 +83,11 @@ export default function Home({ setView }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.3 }}
           >
-            <button onClick={() => setView('citizen')} className="btn btn-primary btn-lg">
+            <button onClick={() => setView('/reports')} className="btn btn-primary btn-lg">
               <span>Report an Issue</span>
               <ArrowRight size={18} />
             </button>
-            <button onClick={() => setView('authority')} className="btn btn-secondary btn-lg">
+            <button onClick={() => setView('/workspace')} className="btn btn-secondary btn-lg">
               <span>Explore City Intelligence</span>
             </button>
           </motion.div>
@@ -549,11 +549,11 @@ export default function Home({ setView }) {
               Build a faster, smarter, more responsive city. Join the municipal managers already piloting CityMindAI in active test environments.
             </p>
             <div className="final-cta-buttons">
-              <button onClick={() => setView('citizen')} className="btn btn-primary btn-lg">
+              <button onClick={() => setView('/reports')} className="btn btn-primary btn-lg">
                 <span>Report an Issue</span>
                 <ArrowRight size={18} />
               </button>
-              <button onClick={() => setView('authority')} className="btn btn-secondary btn-lg">
+              <button onClick={() => setView('/workspace')} className="btn btn-secondary btn-lg">
                 <span>View Operations Center</span>
               </button>
             </div>
@@ -582,8 +582,8 @@ export default function Home({ setView }) {
             </div>
             <div className="footer-link-col">
               <span className="footer-heading">Portals</span>
-              <a href="#citizen" onClick={(e) => { e.preventDefault(); setView('citizen'); }} className="footer-link">Citizen Grievance</a>
-              <a href="#authority" onClick={(e) => { e.preventDefault(); setView('authority'); }} className="footer-link">Authority Dashboard</a>
+              <a href="#citizen" onClick={(e) => { e.preventDefault(); setView('/reports'); }} className="footer-link">Citizen Grievance</a>
+              <a href="#authority" onClick={(e) => { e.preventDefault(); setView('/workspace'); }} className="footer-link">Authority Dashboard</a>
               <a href="#docs" className="footer-link">API Access</a>
             </div>
             <div className="footer-link-col">

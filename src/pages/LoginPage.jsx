@@ -4,7 +4,9 @@ import { Cpu, Mail, Lock, Shield, ArrowLeft } from 'lucide-react';
 export default function LoginPage({ setView, setUser, setCitizenTab }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isAuthorityLogin, setIsAuthorityLogin] = useState(false);
+  const [isAuthorityLogin, setIsAuthorityLogin] = useState(() => {
+    return window.location.pathname === '/authority/login';
+  });
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSignIn = (e) => {
@@ -20,7 +22,7 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
         const adminUser = { name: 'City Admin', email, role: 'Authority', clearance: 'Level 1 Clearance' };
         setUser(adminUser);
         localStorage.setItem('citymind_user', JSON.stringify(adminUser));
-        setView('authority');
+        setView('/workspace');
       } else {
         setErrorMsg('Invalid authority credentials. Try admin@citymind.ai.');
       }
@@ -29,16 +31,16 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
       const citizenUser = { name: email.split('@')[0], email, role: 'Citizen' };
       setUser(citizenUser);
       localStorage.setItem('citymind_user', JSON.stringify(citizenUser));
-      setView('citizen');
-      if (setCitizenTab) setCitizenTab('profile');
+      setView('/reports');
+      if (setCitizenTab) setCitizenTab('my-reports');
     }
   };
 
   const handleContinueAsGuest = () => {
     const guestUser = { name: 'Guest Citizen', email: 'guest@citymind.ai', role: 'Citizen' };
     setUser(guestUser);
-    setView('citizen');
-    if (setCitizenTab) setCitizenTab('report');
+    setView('/reports');
+    if (setCitizenTab) setCitizenTab('my-reports');
   };
 
   return (
@@ -107,7 +109,7 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
               Forgot Password?
             </button>
             {!isAuthorityLogin && (
-              <button type="button" onClick={() => setView('register')} style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', padding: 0, fontWeight: '700' }}>
+              <button type="button" onClick={() => setView('/signup')} style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', padding: 0, fontWeight: '700' }}>
                 Create Account
               </button>
             )}

@@ -290,6 +290,19 @@ export default function Citizen({
       {/* Main Workspace content panel */}
       <main style={{ flex: '1', minWidth: '0', background: 'transparent' }}>
         
+        {/* Grievance Details View Page (Route: /reports/:id) */}
+        {complaints.some(c => c.id.toString() === activeTab) && (
+          <ComplaintDetailsView 
+            activeTab={activeTab} 
+            complaints={complaints} 
+            setView={setView} 
+            getUrgencyBadge={getUrgencyBadge} 
+            getStatusBadge={getStatusBadge} 
+            formatDate={formatDate} 
+            getStepClass={getStepClass} 
+          />
+        )}
+
         {/* Report Issue sub-page */}
         {activeTab === 'report' && (
           <div style={{ background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '24px', maxWidth: '640px', margin: '0 auto', width: '100%' }}>
@@ -365,7 +378,7 @@ export default function Citizen({
                              c.description.toLowerCase().includes(term) ||
                              c.location.toLowerCase().includes(term);
                     }).map((c) => (
-                      <tr key={c.id} style={{ borderBottom: '1px solid rgba(231,214,201,0.3)', cursor: 'pointer' }} onClick={() => setSelectedComplaint(c)}>
+                      <tr key={c.id} style={{ borderBottom: '1px solid rgba(231,214,201,0.3)', cursor: 'pointer' }} onClick={() => setView(`/reports/${c.id}`)}>
                         <td style={{ padding: '10px 4px', color: 'var(--text-muted)' }}>#{c.id.toString().slice(-6)}</td>
                         <td style={{ padding: '10px 4px', fontWeight: '600', color: 'var(--text-primary)' }}>{c.title}</td>
                         <td style={{ padding: '10px 4px', color: 'var(--text-secondary)' }}>{c.location}</td>
@@ -375,7 +388,7 @@ export default function Citizen({
                         <td style={{ padding: '10px 4px' }}>{getStatusBadge(c.status)}</td>
                         <td style={{ padding: '10px 4px', textAlign: 'right' }}>
                           <button 
-                            onClick={(e) => { e.stopPropagation(); setSelectedComplaint(c); }}
+                            onClick={(e) => { e.stopPropagation(); setView(`/reports/${c.id}`); }}
                             style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--glass-border)', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', color: 'var(--text-primary)' }}
                           >
                             Inspect
@@ -688,6 +701,133 @@ export default function Citizen({
         </div>
       )}
 
+    </div>
+  );
+}
+
+function ComplaintDetailsView({ activeTab, complaints, setView, getUrgencyBadge, getStatusBadge, formatDate, getStepClass }) {
+  const c = complaints.find(item => item.id.toString() === activeTab);
+  if (!c) return null;
+
+  const feedbackKey = `feedback_resolved_${c.id}`;
+  const [feedback, setFeedback] = React.useState(() => localStorage.getItem(feedbackKey) || null);
+
+  const handleFeedback = (val) => {
+    localStorage.setItem(feedbackKey, val);
+    setFeedback(val);
+  };
+
+  return (
+    <div style={{ background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '32px', maxWidth: '720px', margin: '0 auto', width: '100%', marginBottom: '24px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '16px' }}>
+        <button className="back-to-home" onClick={() => setView('/reports')} style={{ margin: 0 }}>
+          <ArrowLeft size={16} />
+          <span>Back to Reports</span>
+        </button>
+        <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.5px' }}>TICKET ID: #{c.id.toString().slice(-6)}</span>
+      </div>
+
+      {/* Main Content */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div>
+          <span className="drawer-cat" style={{ background: 'rgba(185,101,75,0.08)', color: '#B9654B', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', display: 'inline-block', marginBottom: '8px' }}>
+            {c.category || 'Uncategorized'}
+          </span>
+          <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 10px 0', fontFamily: 'var(--font-heading)' }}>{c.title}</h2>
+          
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            {getUrgencyBadge(c.urgency)}
+            {getStatusBadge(c.status)}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', background: 'var(--surface-elevated)', padding: '16px', borderRadius: '6px', border: '1px solid var(--glass-border)' }}>
+          <div>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Reported Location</span>
+            <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: '600' }}>{c.location || 'N/A'}</span>
+          </div>
+          <div>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Reported Date</span>
+            <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: '600' }}>{formatDate(c.createdAt || c.created_at)}</span>
+          </div>
+        </div>
+
+        <div>
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Description</span>
+          <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', margin: 0, lineHeight: '1.5' }}>{c.description}</p>
+        </div>
+
+        {c.image && (
+          <div>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Attached Proof</span>
+            <div style={{ borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--glass-border)' }}>
+              <img src={c.image} alt="Reported details" style={{ width: '100%', maxHeight: '280px', objectFit: 'cover' }} />
+            </div>
+          </div>
+        )}
+
+        {/* Timeline */}
+        <div className="status-tracker-section inline-tracker" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '20px', marginTop: '10px' }}>
+          <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontWeight: '700', display: 'block', marginBottom: '12px' }}>Resolution Stepper Timeline</span>
+          <div className="stepper-visual">
+            <div className={`step-item ${getStepClass(c.status, 1)}`}>
+              <div className="step-circle"><CheckCircle2 size={12} /></div>
+              <div className="step-text-col">
+                <span className="step-name">Submitted</span>
+                <span className="step-time">{formatDate(c.createdAt || c.created_at)}</span>
+              </div>
+            </div>
+            <div className={`step-item ${getStepClass(c.status, 2)}`}>
+              <div className="step-circle"><Sparkles size={12} className="text-cyan" /></div>
+              <div className="step-text-col">
+                <span className="step-name">AI Analyzed</span>
+                <span className="step-time">Triage Complete</span>
+              </div>
+            </div>
+            <div className={`step-item ${getStepClass(c.status, 3)}`}>
+              <div className="step-circle"><CheckCircle2 size={12} /></div>
+              <div className="step-text-col">
+                <span className="step-name">Assigned</span>
+                <span className="step-time">Routed to Dept</span>
+              </div>
+            </div>
+            <div className={`step-item ${getStepClass(c.status, 4)}`}>
+              <div className="step-circle">
+                {c.status?.toLowerCase() === 'in progress' ? <Clock size={12} className="spin-slow" /> : <CheckCircle2 size={12} />}
+              </div>
+              <div className="step-text-col">
+                <span className="step-name">In Progress</span>
+                <span className="step-time">Crews Dispatch</span>
+              </div>
+            </div>
+            <div className={`step-item ${getStepClass(c.status, 5)}`}>
+              <div className="step-circle"><CheckCircle2 size={12} /></div>
+              <div className="step-text-col">
+                <span className="step-name">Resolved</span>
+                <span className="step-time">Verified Action</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Citizen feedback widget */}
+        {c.status?.toLowerCase() === 'resolved' && (
+          <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '20px', marginTop: '10px', textAlign: 'center' }}>
+            <span style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>Was this issue resolved satisfactorily?</span>
+            {feedback ? (
+              <div style={{ fontSize: '12.5px', color: 'var(--accent-cyan)', fontWeight: '600' }}>
+                Thank you for your feedback! (Marked: {feedback})
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                <button onClick={() => handleFeedback('Yes')} className="btn btn-secondary" style={{ padding: '6px 16px', fontSize: '12px' }}>Yes</button>
+                <button onClick={() => handleFeedback('No')} className="btn btn-secondary" style={{ padding: '6px 16px', fontSize: '12px' }}>No</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

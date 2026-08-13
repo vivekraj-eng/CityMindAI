@@ -29,9 +29,9 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
 
     setUser(registeredUser);
     localStorage.setItem('citymind_user', JSON.stringify(registeredUser));
-    setView('citizen');
+    setView('/reports');
     if (setCitizenTab) {
-      setCitizenTab('profile');
+      setCitizenTab('my-reports');
     }
   };
 
@@ -148,7 +148,7 @@ export default function RegisterPage({ setView, setUser, setCitizenTab }) {
 
         <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
           <span>Already have an account? </span>
-          <button onClick={() => setView('login')} style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontWeight: '700', padding: 0 }}>
+          <button onClick={() => setView('/login')} style={{ background: 'none', border: 'none', color: 'var(--accent-cyan)', cursor: 'pointer', fontWeight: '700', padding: 0 }}>
             Sign In
           </button>
         </div>

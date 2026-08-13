@@ -21,7 +21,10 @@ const routes = [
   '/reports',
   '/analytics',
   '/workspace',
-  '/profile'
+  '/profile',
+  '/login',
+  '/signup',
+  '/authority/login'
 ];
 
 (async () => {
