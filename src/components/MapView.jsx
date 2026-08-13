@@ -87,7 +87,9 @@ export default function MapView({ complaints, onSelectTicket }) {
   const currentLocationMarkerRef = useRef(null);
   const accuracyCircleRef = useRef(null);
 
-  const [isApiLoaded, setIsApiLoaded] = useState(!!window.google);
+  const [isApiLoaded, setIsApiLoaded] = useState(() => {
+    return !!(window.google && window.google.maps && window.google.maps.Geocoder && window.google.maps.Map);
+  });
   const [geocodedComplaints, setGeocodedComplaints] = useState([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [activePin, setActivePin] = useState(null);
@@ -106,9 +108,9 @@ export default function MapView({ complaints, onSelectTicket }) {
 
   // Poll for global script load injected in App.jsx
   useEffect(() => {
-    if (window.google) return;
+    if (window.google && window.google.maps && window.google.maps.Geocoder && window.google.maps.Map) return;
     const interval = setInterval(() => {
-      if (window.google) {
+      if (window.google && window.google.maps && window.google.maps.Geocoder && window.google.maps.Map) {
         setIsApiLoaded(true);
         clearInterval(interval);
       }
@@ -118,7 +120,8 @@ export default function MapView({ complaints, onSelectTicket }) {
 
   // Geocode addresses of complaints that lack real coords on load
   useEffect(() => {
-    if (!isApiLoaded) return;
+    if (!isApiLoaded || !window.google || !window.google.maps || !window.google.maps.Geocoder) return;
+    let isMounted = true;
 
     const geocodeRecords = async () => {
       setIsGeocoding(true);
@@ -158,16 +161,21 @@ export default function MapView({ complaints, onSelectTicket }) {
         })
       );
 
-      setGeocodedComplaints(resolved);
-      setIsGeocoding(false);
+      if (isMounted) {
+        setGeocodedComplaints(resolved);
+        setIsGeocoding(false);
+      }
     };
 
     geocodeRecords();
+    return () => {
+      isMounted = false;
+    };
   }, [complaints, isApiLoaded]);
 
   // Initialize Map Instance
   useEffect(() => {
-    if (!isApiLoaded || !mapRef.current || mapInstanceRef.current) return;
+    if (!isApiLoaded || !mapRef.current || mapInstanceRef.current || !window.google || !window.google.maps || !window.google.maps.Map) return;
 
     // Center map around a default city coordinate (e.g. New York Center)
     const defaultCenter = { lat: 40.7128, lng: -74.0060 };
@@ -211,7 +219,11 @@ export default function MapView({ complaints, onSelectTicket }) {
     });
 
     return () => {
-      window.google.maps.event.removeListener(zoomListener);
+      if (zoomListener && typeof zoomListener.remove === 'function') {
+        zoomListener.remove();
+      } else if (window.google && window.google.maps && window.google.maps.event) {
+        window.google.maps.event.removeListener(zoomListener);
+      }
       mapInstanceRef.current = null;
     };
   }, [isApiLoaded]);
