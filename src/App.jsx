@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Citizen from './pages/Citizen';
 import Authority from './pages/Authority';
+import InteractiveBackground from './components/InteractiveBackground';
 import { mockComplaints } from './data/mockData';
 import { fetchComplaints, insertComplaint, updateComplaint } from './services/supabase';
 import './App.css';
@@ -49,6 +50,7 @@ function App() {
 
   return (
     <div className="app-wrapper">
+      <InteractiveBackground />
       <Navbar view={view} setView={setView} />
       <main className="main-content">
         {view === 'home' && <Home setView={setView} />}

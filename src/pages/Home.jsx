@@ -40,10 +40,6 @@ export default function Home({ setView }) {
 
   return (
     <div className="landing-page">
-      {/* Background Orbs */}
-      <div className="bg-glow-orb orb-purple"></div>
-      <div className="bg-glow-orb orb-cyan"></div>
-      <div className="bg-glow-orb orb-blue"></div>
 
       {/* Grid Pattern */}
       <div className="bg-grid-overlay"></div>
