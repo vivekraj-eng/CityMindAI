@@ -174,7 +174,7 @@ function App() {
 
   // Main Route Switch Router View Renderer
   const renderRouteContent = () => {
-    const isAuthRoute = currentPath.startsWith('/workspace') || ['/reports', '/map', '/analytics', '/profile'].includes(currentPath);
+    const isAuthRoute = currentPath.startsWith('/workspace') || currentPath.startsWith('/reports') || ['/map', '/analytics', '/profile'].includes(currentPath);
     if (isAuthRoute && !user) {
       return <LoginPage setView={customNavigate} setUser={setUser} setCitizenTab={setCitizenTab} />;
     }
@@ -189,16 +189,23 @@ function App() {
       return <RegisterPage setView={customNavigate} setUser={setUser} setCitizenTab={setCitizenTab} />;
     }
 
-    if (currentPath === '/reports') {
+    if (currentPath.startsWith('/reports')) {
+      let tab = 'my-reports';
+      if (currentPath === '/reports/track') tab = 'track';
+      else if (currentPath === '/reports/notifications') tab = 'notifications';
+
       return (
         <Citizen 
           complaints={enrichedComplaints} 
           addComplaint={addComplaint} 
           setView={customNavigate} 
-          activeTab={citizenTab} 
-          setActiveTab={(tab) => {
-            setCitizenTab(tab);
-            if (tab === 'profile') customNavigate('/profile');
+          activeTab={tab} 
+          setActiveTab={(nextTab) => {
+            setCitizenTab(nextTab);
+            if (nextTab === 'my-reports') customNavigate('/reports');
+            else if (nextTab === 'track') customNavigate('/reports/track');
+            else if (nextTab === 'notifications') customNavigate('/reports/notifications');
+            else if (nextTab === 'profile') customNavigate('/profile');
           }} 
           user={user} 
           setUser={setUser} 
@@ -219,7 +226,7 @@ function App() {
             </button>
           </div>
           <div style={{ flex: 1, minHeight: '480px', position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
-            <MapView complaints={enrichedComplaints} onSelectTicket={(id) => customNavigate('/workspace/complaints')} />
+            <MapView />
           </div>
         </div>
       );
@@ -248,9 +255,10 @@ function App() {
             updateComplaintCategory={updateComplaintCategory}
             setView={customNavigate} 
             activeTab="profile"
-            setActiveTab={(tab) => {
-              if (tab === 'overview') customNavigate('/workspace');
-              else customNavigate(`/workspace/${tab}`);
+            setActiveTab={(nextTab) => {
+              if (nextTab === 'overview') customNavigate('/workspace');
+              else if (nextTab === 'profile') customNavigate('/profile');
+              else customNavigate(`/workspace/${nextTab}`);
             }}
             user={user}
             setUser={setUser}
@@ -263,9 +271,12 @@ function App() {
             addComplaint={addComplaint} 
             setView={customNavigate} 
             activeTab="profile" 
-            setActiveTab={(tab) => {
-              setCitizenTab(tab);
-              if (tab === 'my-reports') customNavigate('/reports');
+            setActiveTab={(nextTab) => {
+              setCitizenTab(nextTab);
+              if (nextTab === 'my-reports') customNavigate('/reports');
+              else if (nextTab === 'track') customNavigate('/reports/track');
+              else if (nextTab === 'notifications') customNavigate('/reports/notifications');
+              else if (nextTab === 'profile') customNavigate('/profile');
             }} 
             user={user} 
             setUser={setUser} 
@@ -275,6 +286,11 @@ function App() {
     }
 
     if (currentPath.startsWith('/workspace')) {
+      if (user?.role !== 'Authority') {
+        setTimeout(() => customNavigate('/reports'), 0);
+        return null;
+      }
+
       let tab = 'overview';
       if (currentPath === '/workspace/complaints') tab = 'complaints';
       else if (currentPath === '/workspace/map') tab = 'map';
@@ -307,7 +323,7 @@ function App() {
   };
 
   // Convert current path back into compatible view state string for navbar active highlights
-  const viewString = currentPath === '/' ? 'home' : (currentPath === '/reports' ? 'citizen' : 'authority');
+  const viewString = currentPath === '/' ? 'home' : (currentPath.startsWith('/reports') ? 'citizen' : 'authority');
 
   return (
     <div className="app-wrapper">
