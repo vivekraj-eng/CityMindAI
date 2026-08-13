@@ -1182,21 +1182,24 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 500;
+  background: var(--accent-cyan);
+  border: 1px solid rgba(185, 101, 75, 0.2);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   margin-bottom: 16px;
-  padding: 4px 8px;
+  padding: 6px 14px;
   border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(185, 101, 75, 0.15);
   transition: all var(--transition-fast);
 }
 
 .back-to-home:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: #a0533b;
+  color: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(185, 101, 75, 0.25);
 }
 
 .title-area h2 {

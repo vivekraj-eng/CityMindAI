@@ -107,7 +107,7 @@ export default function Citizen({ complaints, addComplaint, setView }) {
       <div className="portal-header">
         <button className="back-to-home" onClick={() => setView('home')}>
           <ArrowLeft size={16} />
-          <span>Back to Landing</span>
+          <span>Back</span>
         </button>
         <div className="title-area">
           <h2>Citizen Grievance Workspace</h2>
