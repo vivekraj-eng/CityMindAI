@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Cpu, User, ChevronDown, Bell, Settings, LogOut, Shield, List, Sparkles } from 'lucide-react';
+import { Cpu, User, ChevronDown, Bell, Settings, LogOut, Shield, List } from 'lucide-react';
 
 export default function Navbar({ 
   view, 
@@ -7,111 +7,10 @@ export default function Navbar({
   user, 
   setUser, 
   activeTab, 
-  citizenTab, 
-  setAuthorityTab, 
-  setCitizenTab 
+  citizenTab 
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef(null);
-
-  const handleNavDirect = (destination) => {
-    if (destination === 'platform') {
-      setView('home');
-      return;
-    }
-
-    if (!user) {
-      setView('login');
-      return;
-    }
-
-    if (destination === 'reports') {
-      if (user.role === 'Authority') {
-        setView('authority');
-        if (setAuthorityTab) setAuthorityTab('overview');
-      } else {
-        setView('citizen');
-        if (setCitizenTab) setCitizenTab('my-reports');
-      }
-    } else if (destination === 'map') {
-      if (user.role === 'Authority') {
-        setView('authority');
-        if (setAuthorityTab) setAuthorityTab('map');
-      } else {
-        setView('citizen');
-        if (setCitizenTab) setCitizenTab('my-reports');
-      }
-    } else if (destination === 'analytics') {
-      if (user.role === 'Authority') {
-        setView('authority');
-        if (setAuthorityTab) setAuthorityTab('analytics');
-      } else {
-        setView('citizen');
-        if (setCitizenTab) setCitizenTab('my-reports');
-      }
-    } else if (destination === 'workspace') {
-      if (user.role === 'Authority') {
-        setView('authority');
-        if (setAuthorityTab) setAuthorityTab('overview');
-      } else {
-        setView('citizen');
-        if (setCitizenTab) setCitizenTab('my-reports');
-      }
-    }
-  };
-
-  const handleProfileClick = () => {
-    if (!user) {
-      setView('login');
-      setIsMenuOpen(false);
-      return;
-    }
-    
-    if (user.role === 'Authority') {
-      setView('authority');
-      if (setAuthorityTab) setAuthorityTab('profile');
-    } else {
-      setView('citizen');
-      if (setCitizenTab) setCitizenTab('profile');
-    }
-    setIsMenuOpen(false);
-  };
-
-  const handleMyReportsClick = () => {
-    if (!user) return;
-    if (user.role === 'Authority') {
-      setView('authority');
-      if (setAuthorityTab) setAuthorityTab('overview');
-    } else {
-      setView('citizen');
-      if (setCitizenTab) setCitizenTab('my-reports');
-    }
-    setIsMenuOpen(false);
-  };
-
-  const handleNotificationsClick = () => {
-    if (!user) return;
-    if (user.role === 'Authority') {
-      setView('authority');
-      if (setAuthorityTab) setAuthorityTab('notifications');
-    } else {
-      setView('citizen');
-      if (setCitizenTab) setCitizenTab('profile');
-    }
-    setIsMenuOpen(false);
-  };
-
-  const handleSettingsClick = () => {
-    if (!user) return;
-    if (user.role === 'Authority') {
-      setView('authority');
-      if (setAuthorityTab) setAuthorityTab('settings');
-    } else {
-      setView('citizen');
-      if (setCitizenTab) setCitizenTab('profile');
-    }
-    setIsMenuOpen(false);
-  };
 
   const handleSignOut = () => {
     if (setUser) {
@@ -119,7 +18,7 @@ export default function Navbar({
       localStorage.removeItem('citymind_user');
     }
     setIsMenuOpen(false);
-    setView('home');
+    setView('/');
   };
 
   // Close dropdown on click outside
@@ -136,20 +35,20 @@ export default function Navbar({
   return (
     <header className="site-header">
       <div className="container header-container">
-        <div className="logo-group" onClick={() => setView('home')} style={{ cursor: 'pointer' }}>
+        <a href="/" className="logo-group" style={{ textDecoration: 'none' }}>
           <div className="logo-icon-wrapper">
             <Cpu className="logo-icon" size={22} />
             <div className="logo-glow"></div>
           </div>
           <span className="logo-text">CityMind<span className="accent-text">AI</span></span>
-        </div>
+        </a>
 
         <nav className="main-nav">
-          <a href="#platform" onClick={(e) => { e.preventDefault(); handleNavDirect('platform'); }} className={`nav-link ${view === 'home' ? 'active' : ''}`}>Platform</a>
-          <a href="#reports" onClick={(e) => { e.preventDefault(); handleNavDirect('reports'); }} className={`nav-link ${view === 'citizen' && citizenTab === 'my-reports' ? 'active' : ''}`}>My Reports</a>
-          <a href="#map" onClick={(e) => { e.preventDefault(); handleNavDirect('map'); }} className={`nav-link ${view === 'authority' && activeTab === 'map' ? 'active' : ''}`}>Live Map</a>
-          <a href="#analytics" onClick={(e) => { e.preventDefault(); handleNavDirect('analytics'); }} className={`nav-link ${view === 'authority' && activeTab === 'analytics' ? 'active' : ''}`}>Analytics</a>
-          <a href="#workspace" onClick={(e) => { e.preventDefault(); handleNavDirect('workspace'); }} className={`nav-link ${(view === 'citizen' || view === 'authority') ? 'active' : ''}`}>Workspace</a>
+          <a href="/" className={`nav-link ${view === 'home' ? 'active' : ''}`}>Platform</a>
+          <a href="/reports" className={`nav-link ${view === 'citizen' && citizenTab === 'my-reports' ? 'active' : ''}`}>My Reports</a>
+          <a href="/map" className={`nav-link ${activeTab === 'map' ? 'active' : ''}`}>Live Map</a>
+          <a href="/analytics" className={`nav-link ${activeTab === 'analytics' ? 'active' : ''}`}>Analytics</a>
+          <a href="/workspace" className={`nav-link ${(view === 'citizen' || view === 'authority') ? 'active' : ''}`}>Workspace</a>
         </nav>
 
         <div className="header-actions" ref={menuRef} style={{ position: 'relative' }}>
@@ -209,37 +108,41 @@ export default function Navbar({
             >
               {user ? (
                 <>
-                  <button 
-                    onClick={handleProfileClick}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', textAlign: 'left' }}
+                  <a 
+                    href="/profile"
+                    onClick={() => setIsMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', textDecoration: 'none', color: 'var(--text-secondary)', fontSize: '12px', borderRadius: '4px' }}
                   >
                     <User size={14} className="text-cyan" />
                     <span>Profile</span>
-                  </button>
+                  </a>
                   
-                  <button 
-                    onClick={handleMyReportsClick}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', textAlign: 'left' }}
+                  <a 
+                    href="/reports"
+                    onClick={() => setIsMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', textDecoration: 'none', color: 'var(--text-secondary)', fontSize: '12px', borderRadius: '4px' }}
                   >
                     <List size={14} className="text-cyan" />
                     <span>My Reports</span>
-                  </button>
+                  </a>
 
-                  <button 
-                    onClick={handleNotificationsClick}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', textAlign: 'left' }}
+                  <a 
+                    href="/workspace"
+                    onClick={() => setIsMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', textDecoration: 'none', color: 'var(--text-secondary)', fontSize: '12px', borderRadius: '4px' }}
                   >
                     <Bell size={14} className="text-cyan" />
                     <span>Notifications</span>
-                  </button>
+                  </a>
 
-                  <button 
-                    onClick={handleSettingsClick}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', textAlign: 'left' }}
+                  <a 
+                    href="/workspace/settings"
+                    onClick={() => setIsMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', textDecoration: 'none', color: 'var(--text-secondary)', fontSize: '12px', borderRadius: '4px' }}
                   >
                     <Settings size={14} className="text-cyan" />
                     <span>Settings</span>
-                  </button>
+                  </a>
 
                   <div style={{ height: '1px', background: 'var(--glass-border)', margin: '4px 0' }} />
 
@@ -253,31 +156,34 @@ export default function Navbar({
                 </>
               ) : (
                 <>
-                  <button 
-                    onClick={() => { setIsMenuOpen(false); setView('login'); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', textAlign: 'left' }}
+                  <a 
+                    href="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', textDecoration: 'none', color: 'var(--text-secondary)', fontSize: '12px', borderRadius: '4px' }}
                   >
                     <User size={14} className="text-cyan" />
                     <span>Sign In</span>
-                  </button>
+                  </a>
                   
-                  <button 
-                    onClick={() => { setIsMenuOpen(false); setView('register'); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', textAlign: 'left' }}
+                  <a 
+                    href="/register"
+                    onClick={() => setIsMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', textDecoration: 'none', color: 'var(--text-secondary)', fontSize: '12px', borderRadius: '4px' }}
                   >
                     <PlusCircleIcon size={14} className="text-cyan" />
                     <span>Create Account</span>
-                  </button>
+                  </a>
 
                   <div style={{ height: '1px', background: 'var(--glass-border)', margin: '4px 0' }} />
 
-                  <button 
-                    onClick={() => { setIsMenuOpen(false); setView('login'); }}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '12px', cursor: 'pointer', borderRadius: '4px', textAlign: 'left' }}
+                  <a 
+                    href="/login"
+                    onClick={() => setIsMenuOpen(false)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', textDecoration: 'none', color: 'var(--text-secondary)', fontSize: '12px', borderRadius: '4px' }}
                   >
                     <Shield size={14} className="text-cyan" />
                     <span>Authority Access</span>
-                  </button>
+                  </a>
                 </>
               )}
             </div>

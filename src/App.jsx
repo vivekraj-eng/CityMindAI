@@ -6,15 +6,17 @@ import Citizen from './pages/Citizen';
 import Authority from './pages/Authority';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import MapView from './components/MapView';
+import Analytics from './components/Analytics';
 import InteractiveBackground from './components/InteractiveBackground';
 import { mockComplaints } from './data/mockData';
 import { fetchComplaints, insertComplaint, updateComplaint } from './services/supabase';
 import './App.css';
 
 function App() {
-  const [view, setView] = useState('home');
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const [activeTab, setActiveTab] = useState('overview');
-  const [citizenTab, setCitizenTab] = useState('report');
+  const [citizenTab, setCitizenTab] = useState('my-reports');
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('citymind_user');
     if (saved) {
@@ -23,6 +25,43 @@ function App() {
     return null;
   });
   const [complaints, setComplaints] = useState(mockComplaints);
+
+  // Monitor popstate for browser back/forward buttons
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
+  // Intercept standard local links for true client-side routing
+  useEffect(() => {
+    const handleLinkClick = (e) => {
+      const link = e.target.closest('a');
+      if (link && link.getAttribute('href')?.startsWith('/') && !link.getAttribute('target')) {
+        e.preventDefault();
+        const href = link.getAttribute('href');
+        window.history.pushState({}, '', href);
+        setCurrentPath(href);
+      }
+    };
+    document.addEventListener('click', handleLinkClick);
+    return () => document.removeEventListener('click', handleLinkClick);
+  }, []);
+
+  // Custom navigate function for backward compatibility with component triggers
+  const customNavigate = (path) => {
+    let targetPath = path;
+    if (path === 'home') targetPath = '/';
+    else if (path === 'citizen') targetPath = '/reports';
+    else if (path === 'authority') targetPath = '/workspace';
+    else if (path === 'login') targetPath = '/login';
+    else if (path === 'register') targetPath = '/register';
+
+    window.history.pushState({}, '', targetPath);
+    setCurrentPath(targetPath);
+  };
 
   // Load complaints from Supabase with localStorage backup on mount
   useEffect(() => {
@@ -144,91 +183,167 @@ function App() {
     await updateComplaint(ticketId, { category: nextCategory });
   };
 
+  // Main Route Switch Router View Renderer
+  const renderRouteContent = () => {
+    const isAuthRoute = currentPath.startsWith('/workspace') || ['/reports', '/map', '/analytics', '/profile'].includes(currentPath);
+    if (isAuthRoute && !user) {
+      return <LoginPage setView={customNavigate} setUser={setUser} setCitizenTab={setCitizenTab} />;
+    }
+
+    if (currentPath === '/' || currentPath === '/index.html') {
+      return <Home setView={customNavigate} />;
+    }
+    if (currentPath === '/login') {
+      return <LoginPage setView={customNavigate} setUser={setUser} setCitizenTab={setCitizenTab} />;
+    }
+    if (currentPath === '/register') {
+      return <RegisterPage setView={customNavigate} setUser={setUser} setCitizenTab={setCitizenTab} />;
+    }
+
+    if (currentPath === '/reports') {
+      return (
+        <Citizen 
+          complaints={enrichedComplaints} 
+          addComplaint={addComplaint} 
+          setView={customNavigate} 
+          activeTab={citizenTab} 
+          setActiveTab={(tab) => {
+            setCitizenTab(tab);
+            if (tab === 'profile') customNavigate('/profile');
+          }} 
+          user={user} 
+          setUser={setUser} 
+        />
+      );
+    }
+
+    if (currentPath === '/map') {
+      return (
+        <div style={{ background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '24px', minHeight: 'calc(100vh - 160px)', display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h2 style={{ fontSize: '22px', fontWeight: '700', fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', margin: 0 }}>CityMind Live Civic Map</h2>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>Real-time location clusters and geocoded municipality indicators.</p>
+            </div>
+            <button className="back-to-home" onClick={() => customNavigate('/')}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>Back</span>
+            </button>
+          </div>
+          <div style={{ flex: 1, minHeight: '480px', position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
+            <MapView complaints={enrichedComplaints} onSelectTicket={(id) => customNavigate('/workspace/complaints')} />
+          </div>
+        </div>
+      );
+    }
+
+    if (currentPath === '/analytics') {
+      return (
+        <div style={{ background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '24px', marginTop: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: '700', fontFamily: 'var(--font-heading)', color: 'var(--text-primary)', margin: 0 }}>Municipal Performance Analytics</h2>
+            <button className="back-to-home" onClick={() => customNavigate('/')}>
+              <span>Back</span>
+            </button>
+          </div>
+          <Analytics complaints={enrichedComplaints} />
+        </div>
+      );
+    }
+
+    if (currentPath === '/profile') {
+      if (user?.role === 'Authority') {
+        return (
+          <Authority 
+            complaints={enrichedComplaints} 
+            updateComplaintStatus={updateComplaintStatus}
+            updateComplaintCategory={updateComplaintCategory}
+            setView={customNavigate} 
+            activeTab="profile"
+            setActiveTab={(tab) => {
+              if (tab === 'overview') customNavigate('/workspace');
+              else customNavigate(`/workspace/${tab}`);
+            }}
+            user={user}
+            setUser={setUser}
+          />
+        );
+      } else {
+        return (
+          <Citizen 
+            complaints={enrichedComplaints} 
+            addComplaint={addComplaint} 
+            setView={customNavigate} 
+            activeTab="profile" 
+            setActiveTab={(tab) => {
+              setCitizenTab(tab);
+              if (tab === 'my-reports') customNavigate('/reports');
+            }} 
+            user={user} 
+            setUser={setUser} 
+          />
+        );
+      }
+    }
+
+    if (currentPath.startsWith('/workspace')) {
+      let tab = 'overview';
+      if (currentPath === '/workspace/complaints') tab = 'complaints';
+      else if (currentPath === '/workspace/map') tab = 'map';
+      else if (currentPath === '/workspace/departments') tab = 'departments';
+      else if (currentPath === '/workspace/copilot') tab = 'copilot';
+      else if (currentPath === '/workspace/analytics') tab = 'analytics';
+      else if (currentPath === '/workspace/resolved') tab = 'resolved';
+      else if (currentPath === '/workspace/settings') tab = 'settings';
+
+      return (
+        <Authority 
+          complaints={enrichedComplaints} 
+          updateComplaintStatus={updateComplaintStatus}
+          updateComplaintCategory={updateComplaintCategory}
+          setView={customNavigate} 
+          activeTab={tab}
+          setActiveTab={(nextTab) => {
+            setActiveTab(nextTab);
+            if (nextTab === 'overview') customNavigate('/workspace');
+            else customNavigate(`/workspace/${nextTab}`);
+          }}
+          user={user}
+          setUser={setUser}
+        />
+      );
+    }
+
+    // Default Fallback
+    return <Home setView={customNavigate} />;
+  };
+
+  // Convert current path back into compatible view state string for navbar active highlights
+  const viewString = currentPath === '/' ? 'home' : (currentPath === '/reports' ? 'citizen' : 'authority');
+
   return (
     <div className="app-wrapper">
       <InteractiveBackground />
       <Navbar 
-        view={view} 
-        setView={setView} 
+        view={viewString} 
+        setView={customNavigate} 
         user={user} 
         setUser={setUser} 
-        activeTab={activeTab}
+        activeTab={currentPath.startsWith('/workspace/') ? currentPath.split('/')[2] : 'overview'}
         citizenTab={citizenTab}
         setAuthorityTab={setActiveTab} 
         setCitizenTab={setCitizenTab} 
       />
       <main className="main-content">
         <AnimatePresence mode="wait">
-          {view === 'home' && (
-            <motion.div
-              key="home"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-            >
-              <Home setView={setView} />
-            </motion.div>
-          )}
-          {view === 'login' && (
-            <motion.div
-              key="login"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-            >
-              <LoginPage setView={setView} setUser={setUser} setCitizenTab={setCitizenTab} />
-            </motion.div>
-          )}
-          {view === 'register' && (
-            <motion.div
-              key="register"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-            >
-              <RegisterPage setView={setView} setUser={setUser} setCitizenTab={setCitizenTab} />
-            </motion.div>
-          )}
-          {view === 'citizen' && (
-            <motion.div
-              key="citizen"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-            >
-              <Citizen 
-                complaints={enrichedComplaints} 
-                addComplaint={addComplaint} 
-                setView={setView} 
-                activeTab={citizenTab} 
-                setActiveTab={setCitizenTab} 
-                user={user} 
-                setUser={setUser} 
-              />
-            </motion.div>
-          )}
-          {view === 'authority' && (
-            <motion.div
-              key="authority"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-            >
-              <Authority 
-                complaints={enrichedComplaints} 
-                updateComplaintStatus={updateComplaintStatus}
-                updateComplaintCategory={updateComplaintCategory}
-                setView={setView} 
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-              />
-            </motion.div>
-          )}
+          <motion.div
+            key={currentPath}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderRouteContent()}
+          </motion.div>
         </AnimatePresence>
       </main>
     </div>
