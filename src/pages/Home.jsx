@@ -68,8 +68,8 @@ export default function Home({ setView }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
           >
-            AI-Powered Intelligence <br />
-            <span className="gradient-text">for Smarter Cities.</span>
+            AI that understands <br />
+            <span className="gradient-text-alt">your city.</span>
           </motion.h1>
 
           <motion.p 
@@ -112,13 +112,13 @@ export default function Home({ setView }) {
             <div className="abstract-city-grid">
               <svg width="100%" height="100%" viewBox="0 0 400 400" fill="none" className="grid-svg">
                 {/* City Grid Lines */}
-                <path d="M 50,0 L 50,400 M 150,0 L 150,400 M 250,0 L 250,400 M 350,0 L 350,400" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-                <path d="M 0,50 L 400,50 M 0,150 L 400,150 M 0,250 L 400,250 M 0,350 L 400,350" stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-                
-                {/* Diagonal connection lines */}
-                <path d="M 50,150 L 200,200 L 350,150" stroke="rgba(6, 182, 212, 0.15)" strokeWidth="1.5" strokeDasharray="4 4" />
-                <path d="M 150,350 L 200,200 L 250,50" stroke="rgba(139, 92, 246, 0.15)" strokeWidth="1.5" />
-                <path d="M 50,250 L 200,200 L 350,350" stroke="rgba(59, 130, 246, 0.15)" strokeWidth="1.5" />
+                 <path d="M 50,0 L 50,400 M 150,0 L 150,400 M 250,0 L 250,400 M 350,0 L 350,400" stroke="rgba(0,0,0,0.06)" strokeWidth="1" />
+                 <path d="M 0,50 L 400,50 M 0,150 L 400,150 M 0,250 L 400,250 M 0,350 L 400,350" stroke="rgba(0,0,0,0.06)" strokeWidth="1" />
+                 
+                 {/* Diagonal connection lines */}
+                 <path d="M 50,150 L 200,200 L 350,150" stroke="rgba(9, 105, 218, 0.15)" strokeWidth="1.5" strokeDasharray="4 4" />
+                 <path d="M 150,350 L 200,200 L 250,50" stroke="rgba(102, 51, 153, 0.15)" strokeWidth="1.5" />
+                 <path d="M 50,250 L 200,200 L 350,350" stroke="rgba(0, 86, 179, 0.15)" strokeWidth="1.5" />
 
                 {/* City Nodes */}
                 <circle cx="50" cy="150" r="5" fill="#3b82f6" className="pulse-node-slow" />
@@ -140,9 +140,9 @@ export default function Home({ setView }) {
 
                 {/* Central AI Node */}
                 <g transform="translate(200, 200)">
-                  <circle cx="0" cy="0" r="28" fill="rgba(139, 92, 246, 0.15)" className="brain-glow-outer" />
-                  <circle cx="0" cy="0" r="16" fill="rgba(6, 182, 212, 0.25)" className="brain-glow-inner" />
-                  <circle cx="0" cy="0" r="8" fill="#06b6d4" />
+                  <circle cx="0" cy="0" r="28" fill="rgba(102, 51, 153, 0.08)" className="brain-glow-outer" />
+                  <circle cx="0" cy="0" r="16" fill="rgba(9, 105, 218, 0.1)" className="brain-glow-inner" />
+                  <circle cx="0" cy="0" r="8" fill="var(--accent-cyan)" />
                 </g>
               </svg>
             </div>

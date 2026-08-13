@@ -1,25 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --bg-color: #080A0D;
-  --surface-color: #101318;
-  --surface-elevated: #151A20;
+  --bg-color: #FAF9F6;
+  --surface-color: #FFFFFF;
+  --surface-elevated: #F5F6F8;
   
-  --text-primary: #F2F4F7;
-  --text-secondary: #8D96A3;
-  --text-muted: #5A6270;
+  --text-primary: #1C1E21;
+  --text-secondary: #4E5561;
+  --text-muted: #828A99;
   
-  --accent-cyan: #00B5D8;
-  --accent-cyan-rgb: 0, 181, 216;
-  --accent-purple: #5E42A6;
-  --accent-purple-rgb: 94, 66, 166;
-  --accent-blue: #2B6CB0;
-  --accent-blue-rgb: 43, 108, 176;
+  --accent-cyan: #0969DA;
+  --accent-cyan-rgb: 9, 105, 218;
+  --accent-purple: #663399;
+  --accent-purple-rgb: 102, 51, 153;
+  --accent-blue: #0056B3;
+  --accent-blue-rgb: 0, 86, 179;
 
-  --glass-bg: rgba(16, 19, 24, 0.85);
-  --glass-border: #20252D;
-  --glass-border-hover: #2F3742;
-  --glass-shadow: rgba(0, 0, 0, 0.7);
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: #E1E4E8;
+  --glass-border-hover: #D1D5DA;
+  --glass-shadow: rgba(149, 157, 165, 0.12);
 
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-heading: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
@@ -74,12 +74,12 @@ a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.16);
 }
 
 @media (max-width: 768px) {
