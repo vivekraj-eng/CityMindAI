@@ -4,6 +4,8 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Citizen from './pages/Citizen';
 import Authority from './pages/Authority';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import InteractiveBackground from './components/InteractiveBackground';
 import { mockComplaints } from './data/mockData';
 import { fetchComplaints, insertComplaint, updateComplaint } from './services/supabase';
@@ -12,6 +14,14 @@ import './App.css';
 function App() {
   const [view, setView] = useState('home');
   const [activeTab, setActiveTab] = useState('overview');
+  const [citizenTab, setCitizenTab] = useState('report');
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('citymind_user');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return null;
+  });
   const [complaints, setComplaints] = useState(mockComplaints);
 
   // Load complaints from Supabase with localStorage backup on mount
@@ -137,7 +147,14 @@ function App() {
   return (
     <div className="app-wrapper">
       <InteractiveBackground />
-      <Navbar view={view} setView={setView} setAuthorityTab={setActiveTab} />
+      <Navbar 
+        view={view} 
+        setView={setView} 
+        user={user} 
+        setUser={setUser} 
+        setAuthorityTab={setActiveTab} 
+        setCitizenTab={setCitizenTab} 
+      />
       <main className="main-content">
         <AnimatePresence mode="wait">
           {view === 'home' && (
@@ -151,6 +168,28 @@ function App() {
               <Home setView={setView} />
             </motion.div>
           )}
+          {view === 'login' && (
+            <motion.div
+              key="login"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <LoginPage setView={setView} setUser={setUser} setCitizenTab={setCitizenTab} />
+            </motion.div>
+          )}
+          {view === 'register' && (
+            <motion.div
+              key="register"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <RegisterPage setView={setView} setUser={setUser} setCitizenTab={setCitizenTab} />
+            </motion.div>
+          )}
           {view === 'citizen' && (
             <motion.div
               key="citizen"
@@ -159,7 +198,15 @@ function App() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
             >
-              <Citizen complaints={enrichedComplaints} addComplaint={addComplaint} setView={setView} />
+              <Citizen 
+                complaints={enrichedComplaints} 
+                addComplaint={addComplaint} 
+                setView={setView} 
+                activeTab={citizenTab} 
+                setActiveTab={setCitizenTab} 
+                user={user} 
+                setUser={setUser} 
+              />
             </motion.div>
           )}
           {view === 'authority' && (
