@@ -6,54 +6,203 @@ const getApiKey = () => {
   return import.meta.env.VITE_GEMINI_API_KEY || '';
 };
 
-const getMockAnalysis = (categoryPreference) => {
+const getMockAnalysis = (categoryPreference, description) => {
+  const desc = description.toLowerCase();
+  let category = categoryPreference || "Roads & Infrastructure";
+  let priority = "Medium";
+  let department = "Roads Dept";
+  let incidentTitle = "Civic Incident";
+  let recommendedAction = "Schedule dispatch to inspect coordinates and report scope of work.";
+
+  if (desc.includes('pothole') || desc.includes('road') || desc.includes('asphalt')) {
+    category = 'Roads & Infrastructure';
+    department = 'Roads Dept';
+    incidentTitle = 'Road Pothole';
+    priority = (desc.includes('huge') || desc.includes('accident') || desc.includes('danger')) ? 'Critical' : 'Medium';
+    recommendedAction = 'Dispatch maintenance crew for asphalt patching.';
+  } else if (desc.includes('streetlight') || desc.includes('light') || desc.includes('lamp')) {
+    category = 'Lighting & Electricity';
+    department = 'Electricity Dept';
+    incidentTitle = 'Streetlight Outage';
+    priority = (desc.includes('exposed') || desc.includes('wire') || desc.includes('live')) ? 'Critical' : 'Medium';
+    recommendedAction = 'Dispatch electrical crew to replace bulb/fixture.';
+  } else if (desc.includes('sewage') || desc.includes('sanitation') || desc.includes('overflow')) {
+    category = 'Water & Sanitation';
+    department = 'Water & Sewerage Dept';
+    incidentTitle = 'Sewage Overflow';
+    priority = desc.includes('homes') || desc.includes('overflowing') ? 'High' : 'Medium';
+    recommendedAction = 'Dispatch water/sewage crews to resolve blockages.';
+  } else if (desc.includes('garbage') || desc.includes('trash') || desc.includes('waste') || desc.includes('dump')) {
+    category = 'Waste Management';
+    department = 'Sanitation Dept';
+    incidentTitle = 'Uncollected Waste';
+    priority = 'Medium';
+    recommendedAction = 'Dispatch sanitation truck for immediate collection.';
+  } else if (desc.includes('wire') || desc.includes('electrical')) {
+    category = 'Lighting & Electricity';
+    department = 'Electricity Dept';
+    incidentTitle = 'Exposed Wire Hazard';
+    priority = 'Critical';
+    recommendedAction = 'Cordon off area immediately and dispatch emergency repairs.';
+  } else if (desc.includes('drain') || desc.includes('gutter') || desc.includes('drainage')) {
+    category = 'Drainage';
+    department = 'Drainage Dept';
+    incidentTitle = 'Blocked Gutter';
+    priority = desc.includes('flood') ? 'High' : 'Medium';
+    recommendedAction = 'Dispatch crew to clean culvert and clear drainage blockages.';
+  } else if (desc.includes('signal') || desc.includes('traffic')) {
+    category = 'Traffic & Signals';
+    department = 'Traffic Dept';
+    incidentTitle = 'Traffic Light Outage';
+    priority = 'High';
+    recommendedAction = 'Dispatch traffic electronics engineer for signal restoration.';
+  } else if (desc.includes('park') || desc.includes('space') || desc.includes('playground')) {
+    category = 'Public Spaces';
+    department = 'Parks & Recreation Dept';
+    incidentTitle = 'Public Space Damage';
+    priority = 'Low';
+    recommendedAction = 'Inspect park facilities and schedule maintenance crew.';
+  }
+
   return {
-    detectedIssue: "Triage Fallback Node",
-    category: categoryPreference || "Roads & Infrastructure",
-    urgency: "Medium",
-    tags: ["offline-fallback", "maintenance"],
-    sentiment: "Negative",
-    aiSummary: "Gemini API offline or key not provided. System activated mock triage fallback.",
-    recommendedAction: "Schedule dispatch to inspect coordinates and report scope of work.",
-    confidence: "80%"
+    validComplaint: true,
+    incidentTitle,
+    category,
+    urgency: priority,
+    priority,
+    confidence: 95,
+    department,
+    locationMentioned: "Reported Location",
+    problemSummary: description,
+    recommendedAction,
+    tags: ["mock-analysis", category.toLowerCase().replace(' & ', '-')],
+    sentiment: "Negative"
   };
+};
+
+export const checkLocalCivicValidity = (description) => {
+  const d = description.trim().toLowerCase();
+  
+  if (d.length < 10) {
+    return false;
+  }
+  
+  if (/^\d+$/.test(d)) {
+    return false;
+  }
+  
+  if (/^[a-z]\1+$/.test(d) || d.includes('asdf') || d.includes('qwerty') || d.includes('zxcv')) {
+    return false;
+  }
+  
+  const blocklist = [
+    'hello', 'hi', 'test', 'asdfgh', 'what is the weather', 'i like pizza', 
+    'tell me a joke', 'random text', '123456', 'weather', 'pizza', 'joke', 'testing'
+  ];
+  if (blocklist.some(phrase => d === phrase || d.startsWith(phrase + ' ') || d.includes('weather') || d.includes('pizza') || d.includes('joke'))) {
+    return false;
+  }
+
+  const civicKeywords = [
+    'pothole', 'street', 'road', 'light', 'lamp', 'wire', 'leak', 'water', 'sewage', 'overflow',
+    'garbage', 'waste', 'trash', 'drain', 'flood', 'traffic', 'signal', 'park', 'pipe', 'rupture',
+    'break', 'accident', 'damage', 'hazard', 'safety', 'electricity', 'blackout', 'power', 'public',
+    'collect', 'infrastructure', 'sidewalk', 'curb', 'tree', 'block', 'clog', 'stench', 'dump',
+    'facility', 'danger', 'exposed', 'construction', 'sign', 'broken', 'repair', 'work', 'maintenance'
+  ];
+  
+  const hasKeyword = civicKeywords.some(kw => d.includes(kw));
+  if (!hasKeyword) {
+    if (d.length < 25) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+export const checkAmbiguity = (description) => {
+  const d = description.trim().toLowerCase();
+  const ambiguousPhrases = [
+    'there is a problem',
+    'there is a problem.',
+    'something is broken',
+    'something is broken.',
+    'please help',
+    'please help.',
+    'issue reported near the road',
+    'issue reported near the road.',
+    'there is an issue',
+    'there is an issue.'
+  ];
+  
+  if (ambiguousPhrases.includes(d) || d === 'problem' || d === 'issue' || (d.length < 22 && (d.includes('problem') || d.includes('broken') || d.includes('issue')))) {
+    return true;
+  }
+  return false;
 };
 
 export const analyzeComplaint = async (title, description, location, categoryPreference = null, imageData = null) => {
   const apiKey = getApiKey();
   
+  // Local validation checks
+  const isLocalValid = checkLocalCivicValidity(description);
+  const isLocalAmbiguous = checkAmbiguity(description);
+
+  if (isLocalAmbiguous) {
+    return {
+      validComplaint: false,
+      clarificationRequired: true,
+      errorMsg: "Could you describe the specific problem?"
+    };
+  }
+
+  if (!isLocalValid) {
+    return {
+      validComplaint: false,
+      errorMsg: "This doesn't appear to be a civic complaint. Please describe a public issue such as a road, water, sanitation, lighting, safety, drainage, or other public-service problem."
+    };
+  }
+
   if (!apiKey) {
     console.warn("VITE_GEMINI_API_KEY not configured. Falling back to Mock Triage.");
-    // Simulate short network delay for fallback visual consistency
     await new Promise(resolve => setTimeout(resolve, 800));
-    return getMockAnalysis(categoryPreference);
+    return getMockAnalysis(categoryPreference, description);
   }
 
   const prompt = `
 You are an expert municipal triage assistant for a smart city grievance system.
-Analyze the following citizen complaint submission:
+Evaluate the following citizen complaint submission:
 - Title: "${title}"
 - Location: "${location}"
 - Description: "${description}"
 ${categoryPreference ? `- User Selected Category Preference: "${categoryPreference}"` : ''}
-${imageData ? '- A photo of the reported incident is attached for visual inspection.' : ''}
 
-Evaluate the issue and return a JSON object with the following fields:
+Determine whether the input is actually a legitimate civic/public-service complaint.
+A civic complaint is a report about public infrastructure or services.
+
+If the submission is NOT a civic complaint (e.g. conversational chit-chat like "hello", "tell me a joke", "what is the weather", "I like pizza", or gibberish/meaningless text), return EXACTLY:
 {
-  "detectedIssue": "Short specific name of the issue (e.g. Water Main Leak, Illegal Waste Dump)",
-  "category": "Must be exactly one of: 'Roads & Infrastructure', 'Water & Sanitation', 'Public Safety', 'Waste Management', 'Lighting & Electricity'",
-  "urgency": "Must be exactly one of: 'High', 'Medium', 'Low'",
-  "tags": ["3-4 relevant tags (e.g. drainage, pothole, sanitation, danger)"],
-  "sentiment": "Must be exactly one of: 'Negative', 'Neutral', 'Positive'",
-  "aiSummary": "A concise 1-2 sentence explanation of what is reported and why it requires attention.",
-  "recommendedAction": "Recommended action for municipal crews (e.g. Dispatch sanitation crew to clear blockages, inspect electrical box safety)."
+  "validComplaint": false
+}
+
+If the submission is valid, evaluate it and return a JSON object with the following fields:
+{
+  "validComplaint": true,
+  "incidentTitle": "Short specific name of the issue (e.g. Water Main Leak, Illegal Waste Dump)",
+  "category": "Must be exactly one of: 'Roads & Infrastructure', 'Water & Sanitation', 'Public Safety', 'Lighting & Electricity', 'Waste Management', 'Drainage', 'Traffic & Signals', 'Public Spaces'",
+  "subcategory": "A specific subcategory string",
+  "priority": "Must be exactly one of: 'Critical', 'High', 'Medium', 'Low'. Assess severity carefully.",
+  "confidence": 95,
+  "department": "The municipal department mapped to category. E.g. 'Roads Dept', 'Water & Sewerage Dept', 'Electricity Dept', 'Sanitation Dept', 'Traffic Dept', 'Parks & Recreation Dept'",
+  "locationMentioned": "The parsed location name or address",
+  "problemSummary": "A concise 1-2 sentence explanation of what is reported.",
+  "recommendedAction": "Recommended action for municipal crews."
 }
 `;
 
   try {
-    const parts = [
-      { text: prompt }
-    ];
+    const parts = [{ text: prompt }];
 
     if (imageData) {
       parts.push({
@@ -70,11 +219,7 @@ Evaluate the issue and return a JSON object with the following fields:
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: parts
-          }
-        ],
+        contents: [{ parts: parts }],
         generationConfig: {
           responseMimeType: "application/json",
           temperature: 0.1
@@ -94,20 +239,44 @@ Evaluate the issue and return a JSON object with the following fields:
     }
 
     const parsed = JSON.parse(resultText);
+    
+    if (parsed.validComplaint === false) {
+      return {
+        validComplaint: false,
+        errorMsg: "This doesn't appear to be a civic complaint. Please describe a public issue such as a road, water, sanitation, lighting, safety, drainage, or other public-service problem."
+      };
+    }
+
+    const category = parsed.category || categoryPreference || "Roads & Infrastructure";
+    const deptMapping = {
+      "Roads & Infrastructure": "Roads Dept",
+      "Water & Sanitation": "Water & Sewerage Dept",
+      "Public Safety": "Public Safety Dept",
+      "Lighting & Electricity": "Electricity Dept",
+      "Waste Management": "Sanitation Dept",
+      "Drainage": "Drainage Dept",
+      "Traffic & Signals": "Traffic Dept",
+      "Public Spaces": "Parks & Recreation Dept"
+    };
+    const department = parsed.department || deptMapping[category] || "General Operations Dept";
+
     return {
-      detectedIssue: parsed.detectedIssue || title,
-      category: parsed.category || categoryPreference || "Roads & Infrastructure",
-      urgency: parsed.urgency || "Medium",
+      validComplaint: true,
+      detectedIssue: parsed.incidentTitle || parsed.detectedIssue || title,
+      category: category,
+      urgency: parsed.priority || parsed.urgency || "Medium",
+      priority: parsed.priority || parsed.urgency || "Medium",
       tags: parsed.tags || ["general-maintenance"],
       sentiment: parsed.sentiment || "Negative",
-      aiSummary: parsed.aiSummary || "Citizen report triaged by operations.",
+      aiSummary: parsed.problemSummary || parsed.aiSummary || "Citizen report triaged by operations.",
       recommendedAction: parsed.recommendedAction || "Inspect site and coordinate resolutions.",
-      confidence: "95%"
+      confidence: parsed.confidence ? `${parsed.confidence}%` : "95%",
+      department: department,
+      locationMentioned: parsed.locationMentioned || location
     };
   } catch (error) {
     console.error("Error communicating with Gemini API:", error);
-    // Graceful fallback to mock behavior
-    return getMockAnalysis(categoryPreference);
+    return getMockAnalysis(categoryPreference, description);
   }
 };
 
