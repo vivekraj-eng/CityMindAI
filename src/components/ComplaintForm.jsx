@@ -13,6 +13,10 @@ export default function ComplaintForm({ addComplaint }) {
   const [imagePreview, setImagePreview] = useState(null);
   const [lastSubmittedText, setLastSubmittedText] = useState('');
   const [formError, setFormError] = useState('');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState('');
+  const [latestAnalysis, setLatestAnalysis] = useState(null);
+  const [success, setSuccess] = useState(false);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
