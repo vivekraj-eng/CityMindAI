@@ -47,49 +47,89 @@ export default function InteractiveBackground() {
     window.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseleave', handleMouseLeave);
 
-    // Particle class definition
-    const colors = [
-      'rgba(185, 101, 75, ', // Terracotta
-      'rgba(82, 106, 120, ',  // Muted blue-gray
-      'rgba(243, 228, 216, ', // Champagne/Muted peach
-      'rgba(255, 249, 244, ', // Soft cream
-    ];
-
-    const particleCount = 65;
+    // Particle Layer Definitions
     const particles = [];
 
-    for (let i = 0; i < particleCount; i++) {
-      const depth = Math.random(); // 0 (background) to 1 (foreground)
+    // Layer 1: Distant Stars
+    const starCount = 95;
+    for (let i = 0; i < starCount; i++) {
       particles.push({
         baseX: Math.random() * width,
         baseY: Math.random() * height,
         x: 0,
         y: 0,
-        size: Math.random() * 2 + 1,
-        colorBase: colors[Math.floor(Math.random() * colors.length)],
-        opacity: Math.random() * 0.15 + 0.05,
-        targetOpacity: Math.random() * 0.15 + 0.05,
-        fadeSpeed: Math.random() * 0.005 + 0.002,
-        depth: depth,
-        // Drift variables
+        size: Math.random() * 0.7 + 0.5,
+        colorBase: 'rgba(255, 249, 244, ', // Soft ivory/champagne
+        opacity: Math.random() * 0.25 + 0.2, // Clearly visible against warm peach
+        twinkleSpeed: Math.random() * 0.02 + 0.01,
+        twinklePhase: Math.random() * Math.PI * 2,
+        depth: 0.15, // Background parallax
         angle: Math.random() * Math.PI * 2,
-        driftSpeed: prefersReducedMotion ? 0 : Math.random() * 0.15 + 0.05,
+        driftSpeed: Math.random() * 0.03 + 0.01,
+        layer: 1
+      });
+    }
+
+    // Layer 2: Midground Particles
+    const midCount = 45;
+    const midColors = [
+      'rgba(243, 228, 216, ', // Champagne
+      'rgba(185, 101, 75, ',  // Terracotta
+      'rgba(82, 106, 120, ',  // Muted blue-gray
+    ];
+    for (let i = 0; i < midCount; i++) {
+      particles.push({
+        baseX: Math.random() * width,
+        baseY: Math.random() * height,
+        x: 0,
+        y: 0,
+        size: Math.random() * 1.2 + 1.3,
+        colorBase: midColors[Math.floor(Math.random() * midColors.length)],
+        opacity: Math.random() * 0.25 + 0.25, // Bright midground floats
+        twinkleSpeed: 0,
+        depth: Math.random() * 0.4 + 0.35, // Medium depth parallax
+        angle: Math.random() * Math.PI * 2,
+        driftSpeed: Math.random() * 0.07 + 0.03,
+        layer: 2
+      });
+    }
+
+    // Layer 3: Feature Particles
+    const featCount = 10;
+    for (let i = 0; i < featCount; i++) {
+      particles.push({
+        baseX: Math.random() * width,
+        baseY: Math.random() * height,
+        x: 0,
+        y: 0,
+        size: Math.random() * 3 + 3.5, // 3.5px to 6.5px soft accents
+        colorBase: Math.random() > 0.4 ? 'rgba(243, 228, 216, ' : 'rgba(185, 101, 75, ',
+        opacity: Math.random() * 0.12 + 0.12, // Subtle atmospheric haze density
+        blur: Math.random() * 4 + 4,
+        twinkleSpeed: 0,
+        depth: Math.random() * 0.2 + 0.8, // Foreground parallax
+        angle: Math.random() * Math.PI * 2,
+        driftSpeed: Math.random() * 0.04 + 0.02,
+        layer: 3
       });
     }
 
     // Civic Data Nodes
     const nodes = [
-      { x: 0.25, y: 0.3, r: 6, opacity: 0.12 },
+      { x: 0.25, y: 0.3, r: 6, opacity: 0.1 },
       { x: 0.75, y: 0.2, r: 4, opacity: 0.08 },
-      { x: 0.85, y: 0.75, r: 5, opacity: 0.1 },
-      { x: 0.15, y: 0.8, r: 4, opacity: 0.08 },
+      { x: 0.85, y: 0.75, r: 5, opacity: 0.09 },
+      { x: 0.15, y: 0.8, r: 4, opacity: 0.07 },
     ];
 
     // Animation Loop
     const render = () => {
-      // Clear with atmospheric haze color matches F3E4D8
+      // Clear canvas with base warm peach matches #F3E4D8
       ctx.fillStyle = '#F3E4D8';
       ctx.fillRect(0, 0, width, height);
+
+      // Reset shadows
+      ctx.shadowBlur = 0;
 
       // Lerping mouse coordinates for smooth inertia
       if (!prefersReducedMotion) {
@@ -97,29 +137,16 @@ export default function InteractiveBackground() {
         mouse.y += (mouse.targetY - mouse.y) * 0.05;
       }
 
-      // Draw faint connections between a few particles to simulate civic nodes
-      ctx.lineWidth = 0.5;
-      ctx.strokeStyle = 'rgba(185, 101, 75, 0.03)';
-      for (let i = 0; i < 6; i++) {
-        const p1 = particles[i];
-        const p2 = particles[i + 1];
-        if (p1 && p2) {
-          ctx.beginPath();
-          ctx.moveTo(p1.x, p1.y);
-          ctx.lineTo(p2.x, p2.y);
-          ctx.stroke();
-        }
-      }
-
       // Draw static civic nodes in the distance
       nodes.forEach((n) => {
-        const parallaxX = !prefersReducedMotion ? (mouse.x - width / 2) * 0.015 : 0;
-        const parallaxY = !prefersReducedMotion ? (mouse.y - height / 2) * 0.015 : 0;
+        const parallaxX = !prefersReducedMotion ? (mouse.x - width / 2) * 0.01 : 0;
+        const parallaxY = !prefersReducedMotion ? (mouse.y - height / 2) * 0.01 : 0;
         
         const nodeX = n.x * width + parallaxX;
         const nodeY = n.y * height + parallaxY;
 
         ctx.strokeStyle = `rgba(82, 106, 120, ${n.opacity})`;
+        ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.arc(nodeX, nodeY, n.r, 0, Math.PI * 2);
         ctx.stroke();
@@ -132,21 +159,20 @@ export default function InteractiveBackground() {
 
       // Update and Draw Particles
       particles.forEach((p) => {
-        // Natural drift over time
+        // Natural floating motion
         if (!prefersReducedMotion) {
-          p.angle += 0.002;
+          p.angle += 0.001;
           p.baseX += Math.cos(p.angle) * p.driftSpeed;
           p.baseY += Math.sin(p.angle) * p.driftSpeed;
         }
 
         // Reset if drifted offscreen
-        if (p.baseX < 0) p.baseX = width;
-        if (p.baseX > width) p.baseX = 0;
-        if (p.baseY < 0) p.baseY = height;
-        if (p.baseY > height) p.baseY = 0;
+        if (p.baseX < -10) p.baseX = width + 10;
+        if (p.baseX > width + 10) p.baseX = -10;
+        if (p.baseY < -10) p.baseY = height + 10;
+        if (p.baseY > height + 10) p.baseY = -10;
 
-        // Calculate Mouse influence based on depth layers
-        // Foreground particles respond noticeably, background particles are almost static
+        // Mouse influence based on Z-depth layers
         let offsetX = 0;
         let offsetY = 0;
 
@@ -154,41 +180,49 @@ export default function InteractiveBackground() {
           const dx = mouse.x - p.baseX;
           const dy = mouse.y - p.baseY;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const maxInfluence = 150;
+          const maxInfluence = 180;
 
           if (dist < maxInfluence) {
             const force = (maxInfluence - dist) / maxInfluence;
-            // Shift particles gently away/towards cursor depending on depth layer
-            const shiftAmt = force * 35 * p.depth;
+            // Shift foreground particles slightly stronger, distant stars extremely subtle
+            const shiftAmt = force * 28 * p.depth;
             offsetX = -(dx / dist) * shiftAmt;
             offsetY = -(dy / dist) * shiftAmt;
           }
         }
 
-        // Apply Parallax effect based on depth layer
-        const parallaxX = !prefersReducedMotion ? (mouse.x - width / 2) * 0.025 * p.depth : 0;
-        const parallaxY = !prefersReducedMotion ? (mouse.y - height / 2) * 0.025 * p.depth : 0;
+        // Parallax depth calculation
+        const parallaxX = !prefersReducedMotion ? (mouse.x - width / 2) * 0.02 * p.depth : 0;
+        const parallaxY = !prefersReducedMotion ? (mouse.y - height / 2) * 0.02 * p.depth : 0;
 
         p.x = p.baseX + offsetX + parallaxX;
         p.y = p.baseY + offsetY + parallaxY;
 
-        // Soft fading in/out animation
-        if (p.opacity < p.targetOpacity) {
-          p.opacity += p.fadeSpeed;
-        } else {
-          p.opacity -= p.fadeSpeed;
-          if (p.opacity <= 0.02) {
-            p.targetOpacity = Math.random() * 0.15 + 0.05;
-            p.baseX = Math.random() * width;
-            p.baseY = Math.random() * height;
-          }
+        // Render layer-specific twinkling and styles
+        let currentOpacity = p.opacity;
+
+        if (p.layer === 1) {
+          // Subtle stars twinkling
+          p.twinklePhase += p.twinkleSpeed;
+          currentOpacity = Math.max(0.1, p.opacity + Math.sin(p.twinklePhase) * 0.12);
         }
 
-        ctx.fillStyle = `${p.colorBase}${p.opacity})`;
+        // Feature particle glow accents
+        if (p.layer === 3 && p.blur) {
+          ctx.shadowBlur = p.blur;
+          ctx.shadowColor = p.colorBase.indexOf('185') !== -1 ? '#B9654B' : '#FFF9F4';
+        } else {
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.fillStyle = `${p.colorBase}${currentOpacity})`;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
         ctx.fill();
       });
+
+      // Reset shadow blur for next frame
+      ctx.shadowBlur = 0;
 
       animationFrameId = requestAnimationFrame(render);
     };
