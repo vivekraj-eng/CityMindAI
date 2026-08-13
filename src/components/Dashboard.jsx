@@ -270,6 +270,60 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
                 </div>
               </div>
 
+              {/* Operational Status Timeline Stepper */}
+              <div className="inspector-section" style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '16px', marginBottom: '20px' }}>
+                <span className="section-label" style={{ fontWeight: '700', marginBottom: '12px', display: 'block' }}>Operational Stage Timeline</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', padding: '0 8px', marginTop: '8px' }}>
+                  {/* Stepper bar */}
+                  <div style={{ position: 'absolute', top: '10px', left: '20px', right: '20px', height: '2px', background: 'var(--glass-border)', zIndex: '1' }}>
+                    <div style={{ 
+                      height: '100%', 
+                      width: `${(([
+                        'submitted', 'ai analyzed', 'assigned', 'in progress', 'resolved'
+                      ].indexOf(selectedTicket.status?.toLowerCase()) >= 0 ? [
+                        'submitted', 'ai analyzed', 'assigned', 'in progress', 'resolved'
+                      ].indexOf(selectedTicket.status?.toLowerCase()) : 0) / 4) * 100}%`, 
+                      background: 'var(--accent-cyan)',
+                      transition: 'width 0.3s ease'
+                    }}></div>
+                  </div>
+                  
+                  {['Sub', 'AI', 'Asgn', 'Prog', 'Res'].map((label, stepIdx) => {
+                    const activeStep = [
+                      'submitted', 'ai analyzed', 'assigned', 'in progress', 'resolved'
+                    ].indexOf(selectedTicket.status?.toLowerCase()) >= 0 ? [
+                      'submitted', 'ai analyzed', 'assigned', 'in progress', 'resolved'
+                    ].indexOf(selectedTicket.status?.toLowerCase()) + 1 : 1;
+                    
+                    const isDone = stepIdx + 1 <= activeStep;
+                    const isCurrent = stepIdx + 1 === activeStep;
+                    
+                    return (
+                      <div key={stepIdx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: '2', position: 'relative' }}>
+                        <div style={{ 
+                          width: '20px', 
+                          height: '20px', 
+                          borderRadius: '50%', 
+                          background: isDone ? 'var(--accent-cyan)' : 'var(--surface-elevated)', 
+                          border: isCurrent ? '2px solid #FFF9F4' : '1px solid var(--glass-border)',
+                          boxShadow: isCurrent ? '0 0 8px var(--accent-cyan)' : 'none',
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          fontSize: '9px',
+                          fontWeight: 'bold',
+                          color: isDone ? '#FFF' : 'var(--text-muted)',
+                          transition: 'all 0.3s ease'
+                        }}>
+                          {stepIdx + 1}
+                        </div>
+                        <span style={{ fontSize: '9.5px', marginTop: '6px', fontWeight: isCurrent ? '700' : '400', color: isCurrent ? 'var(--text-primary)' : 'var(--text-muted)' }}>{label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               {showProofForm && (
                 <div className="inspector-section" style={{ border: '1px solid rgba(46, 125, 50, 0.2)', padding: '12px', borderRadius: '4px', background: 'rgba(46, 125, 50, 0.02)', marginBottom: '16px' }}>
                   <span className="section-label" style={{ color: '#2e7d32', fontWeight: '700' }}>Resolution Proof Details</span>

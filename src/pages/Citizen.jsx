@@ -345,15 +345,23 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                 {getStatusBadge(selectedComplaint.status)}
               </div>
 
+              {/* Current state badge banner */}
+              <div style={{ background: 'rgba(185, 101, 75, 0.04)', border: '1px solid rgba(185, 101, 75, 0.15)', borderRadius: '6px', padding: '10px 14px', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Current Resolution Stage:</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#B9654B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {selectedComplaint.status}
+                </span>
+              </div>
+
               {/* Stepper Status Tracker */}
               <div className="status-tracker-section">
-                <span className="tracker-header">Resolution Stepper</span>
+                <span className="tracker-header">Resolution Stepper Timeline</span>
                 <div className="stepper-visual">
                   {/* Step 1: Submit */}
                   <div className={`step-item ${getStepClass(selectedComplaint.status, 1)}`}>
                     <div className="step-circle"><CheckCircle2 size={14} /></div>
                     <div className="step-text-col">
-                      <span className="step-name">Issue Registered</span>
+                      <span className="step-name">Submitted</span>
                       <span className="step-time">{formatDate(selectedComplaint.createdAt)}</span>
                     </div>
                   </div>
@@ -361,7 +369,7 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                   <div className={`step-item ${getStepClass(selectedComplaint.status, 2)}`}>
                     <div className="step-circle"><Sparkles size={14} className="text-cyan" /></div>
                     <div className="step-text-col">
-                      <span className="step-name">AI Triage Completed</span>
+                      <span className="step-name">AI Analyzed</span>
                       <span className="step-time">Analyzed by Gemini AI</span>
                     </div>
                   </div>
@@ -369,8 +377,8 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                   <div className={`step-item ${getStepClass(selectedComplaint.status, 3)}`}>
                     <div className="step-circle"><CheckCircle2 size={14} /></div>
                     <div className="step-text-col">
-                      <span className="step-name">Routed to Department</span>
-                      <span className="step-time">Assigned: {selectedComplaint.category}</span>
+                      <span className="step-name">Assigned</span>
+                      <span className="step-time">Routed to {selectedComplaint.category}</span>
                     </div>
                   </div>
                   {/* Step 4: Dispatch */}
@@ -379,7 +387,7 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                       {selectedComplaint.status?.toLowerCase() === 'in progress' ? <Clock size={14} className="spin-slow" /> : <CheckCircle2 size={14} />}
                     </div>
                     <div className="step-text-col">
-                      <span className="step-name">Municipal Work Dispatch</span>
+                      <span className="step-name">In Progress</span>
                       <span className="step-time">{['pending', 'submitted', 'ai analyzed', 'assigned'].includes(selectedComplaint.status?.toLowerCase()) ? 'Awaiting Dispatch' : 'Crew Dispatched'}</span>
                     </div>
                   </div>
