@@ -197,9 +197,15 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
               <div className="inspector-section-ai-report">
                 <div className="ai-report-header">
                   <Sparkles size={14} className="text-cyan" />
-                  <span>Gemini AI Auto-Triage Log</span>
+                  <span>Gemini AI Auto-Triage Log {selectedTicket.confidence ? `(Confidence: ${selectedTicket.confidence})` : ''}</span>
                 </div>
                 <div className="ai-report-body">
+                  {selectedTicket.detectedIssue && (
+                    <div className="report-log-item">
+                      <span className="log-label">Detected Incident:</span>
+                      <p className="log-desc" style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{selectedTicket.detectedIssue}</p>
+                    </div>
+                  )}
                   <div className="report-log-item">
                     <span className="log-label">AI Urgency Rating:</span>
                     <span className={`urgency-text-color-${selectedTicket.urgency?.toLowerCase()}`}>
@@ -209,6 +215,15 @@ export default function Dashboard({ complaints, updateComplaintStatus, updateCom
                   <div className="report-log-item">
                     <span className="log-label">AI Summary:</span>
                     <p className="log-desc">{selectedTicket.aiSummary}</p>
+                  </div>
+                  <div className="report-log-item">
+                    <span className="log-label">Insights:</span>
+                    <div className="tags-row" style={{ marginTop: '4px', gap: '8px' }}>
+                      {selectedTicket.tags && selectedTicket.tags.map((tag, idx) => (
+                        <span key={idx} className="ai-pill-tag" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', padding: '2px 8px', borderRadius: '4px', fontSize: '10px' }}>#{tag}</span>
+                      ))}
+                      <span className="ai-pill-tag sentiment-pill" style={{ background: 'rgba(6,182,212,0.05)', border: '1px solid rgba(6,182,212,0.15)', color: 'var(--accent-cyan)', padding: '2px 8px', borderRadius: '4px', fontSize: '10px' }}>{selectedTicket.sentiment || 'Neutral'} Sentiment</span>
+                    </div>
                   </div>
                 </div>
               </div>

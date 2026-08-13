@@ -4,7 +4,7 @@ import { AlertTriangle, Tag, ShieldAlert, FileText, CheckCircle2 } from 'lucide-
 export default function AIAnalysis({ analysis }) {
   if (!analysis) return null;
 
-  const { category, urgency, tags, sentiment, aiSummary } = analysis;
+  const { category, urgency, tags, sentiment, aiSummary, detectedIssue, recommendedAction, confidence } = analysis;
 
   // Urgency theme helper
   const getUrgencyTheme = (level) => {
@@ -42,22 +42,28 @@ export default function AIAnalysis({ analysis }) {
           <ShieldAlert size={16} className="header-icon" />
           <h4>Gemini AI Triage Report</h4>
         </div>
-        <span className="confidence-pill">AI Confidence: 94.8%</span>
+        <span className="confidence-pill">AI Confidence: {confidence || '94%'}</span>
       </div>
 
       <div className="analysis-body">
-        {/* Urgency and Category */}
+        {/* Detected Issue & Category */}
         <div className="analysis-row">
+          <div className="analysis-item">
+            <span className="item-label">Detected Incident</span>
+            <span className="item-value" style={{ color: 'var(--text-primary)' }}>{detectedIssue || 'Reported Issue'}</span>
+          </div>
           <div className="analysis-item">
             <span className="item-label">Assigned Category</span>
             <span className="item-value">{category}</span>
           </div>
-          <div className="analysis-item">
-            <span className="item-label">Severity Assessment</span>
-            <span className="item-value-badge" style={{ color: theme.color, borderColor: theme.color }}>
-              {theme.label}
-            </span>
-          </div>
+        </div>
+
+        {/* Severity Assessment */}
+        <div className="analysis-item">
+          <span className="item-label">Severity Assessment</span>
+          <span className="item-value-badge" style={{ color: theme.color, borderColor: theme.color, display: 'inline-block', marginTop: '2px' }}>
+            {theme.label}
+          </span>
         </div>
 
         {/* AI Summary */}
@@ -65,6 +71,16 @@ export default function AIAnalysis({ analysis }) {
           <span className="item-label">AI Summary</span>
           <p className="summary-text">{aiSummary}</p>
         </div>
+
+        {/* Recommended Action */}
+        {recommendedAction && (
+          <div className="summary-section">
+            <span className="item-label">Suggested Resolution Directive</span>
+            <p className="summary-text" style={{ color: 'var(--accent-cyan)', fontWeight: '500' }}>
+              {recommendedAction}
+            </p>
+          </div>
+        )}
 
         {/* Tags */}
         <div className="tags-section">

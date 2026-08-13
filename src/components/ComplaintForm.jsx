@@ -36,8 +36,8 @@ export default function ComplaintForm({ addComplaint }) {
     }
 
     try {
-      // Call mock Gemini analysis
-      const aiResponse = await analyzeComplaint(description, category === 'Auto-Detect' ? null : category);
+      // Call Gemini analysis
+      const aiResponse = await analyzeComplaint(title, description, location, category === 'Auto-Detect' ? null : category);
       
       const newTicket = {
         id: Date.now(),
@@ -50,7 +50,10 @@ export default function ComplaintForm({ addComplaint }) {
         createdAt: new Date().toISOString(),
         aiSummary: aiResponse.aiSummary,
         tags: aiResponse.tags,
-        sentiment: aiResponse.sentiment
+        sentiment: aiResponse.sentiment,
+        detectedIssue: aiResponse.detectedIssue,
+        recommendedAction: aiResponse.recommendedAction,
+        confidence: aiResponse.confidence
       };
 
       // Add to global state

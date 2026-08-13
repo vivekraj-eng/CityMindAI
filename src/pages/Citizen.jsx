@@ -387,10 +387,24 @@ export default function Citizen({ complaints, addComplaint, setView }) {
                   <span>Gemini AI Extracted Insights</span>
                 </div>
                 <div className="ai-detail-body">
+                  {selectedComplaint.detectedIssue && (
+                    <div className="ai-detail-block">
+                      <span className="ai-label">Detected Incident</span>
+                      <p className="ai-val" style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
+                        {selectedComplaint.detectedIssue} (Confidence: {selectedComplaint.confidence || '94%'})
+                      </p>
+                    </div>
+                  )}
                   <div className="ai-detail-block">
-                    <span className="ai-label">Summary Summary</span>
+                    <span className="ai-label">Summary Overview</span>
                     <p className="ai-val">{selectedComplaint.aiSummary || 'Triage summary generated instantly.'}</p>
                   </div>
+                  {selectedComplaint.recommendedAction && (
+                    <div className="ai-detail-block">
+                      <span className="ai-label">Suggested Resolution Directive</span>
+                      <p className="ai-val text-cyan" style={{ fontWeight: '500' }}>{selectedComplaint.recommendedAction}</p>
+                    </div>
+                  )}
                   <div className="ai-detail-block">
                     <span className="ai-label">Triage Tags</span>
                     <div className="tags-row">
