@@ -59,6 +59,9 @@ export const updateComplaint = async (id, updates) => {
     if (updates.status !== undefined) dbUpdates.status = updates.status;
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.urgency !== undefined) dbUpdates.urgency = updates.urgency;
+    if (updates.priority !== undefined) dbUpdates.urgency = updates.priority;
+    if (updates.department !== undefined) dbUpdates.category = updates.department;
+    dbUpdates.updated_at = new Date().toISOString();
 
     const response = await fetch(`${supabaseUrl}/rest/v1/complaints?id=eq.${id}`, {
       method: 'PATCH',
@@ -81,9 +84,9 @@ const complaintToDb = (c) => ({
   id: c.id,
   title: c.title,
   description: c.description,
-  category: c.category,
+  category: c.department || c.category,
   location: c.location,
-  urgency: c.urgency,
+  urgency: c.priority || c.urgency,
   status: c.status,
   ai_summary: c.aiSummary,
   tags: c.tags,
@@ -91,7 +94,8 @@ const complaintToDb = (c) => ({
   detected_issue: c.detectedIssue,
   recommended_action: c.recommendedAction,
   confidence: c.confidence,
-  created_at: c.createdAt || new Date().toISOString()
+  created_at: c.createdAt || new Date().toISOString(),
+  updated_at: c.updatedAt || new Date().toISOString()
 });
 
 const dbToComplaint = (row) => ({
@@ -101,6 +105,8 @@ const dbToComplaint = (row) => ({
   category: row.category,
   location: row.location,
   urgency: row.urgency,
+  priority: row.urgency,
+  department: row.category,
   status: row.status,
   aiSummary: row.ai_summary,
   tags: row.tags,
@@ -108,5 +114,6 @@ const dbToComplaint = (row) => ({
   detectedIssue: row.detected_issue,
   recommendedAction: row.recommended_action,
   confidence: row.confidence,
-  createdAt: row.created_at
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
 });
