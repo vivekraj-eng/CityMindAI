@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ComplaintForm from '../components/ComplaintForm';
 import { 
   Search, 
@@ -35,9 +35,14 @@ export default function Citizen({
   const [trackResult, setTrackResult] = useState(null);
   const [trackAttempted, setTrackAttempted] = useState(false);
 
-  // Profile Form Edit state
   const [isEditing, setIsEditing] = useState(false);
-  const [profileName, setProfileName] = useState(user?.name || 'Citizen User');
+  const [profileNameInput, setProfileNameInput] = useState(user?.name || 'Citizen User');
+
+  useEffect(() => {
+    if (user?.name) {
+      setProfileNameInput(user.name);
+    }
+  }, [user]);
 
   const handleTrackSearch = () => {
     setTrackAttempted(true);
@@ -545,7 +550,7 @@ export default function Citizen({
                   <User size={28} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>{profileName}</h3>
+                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>{user?.name || 'Citizen User'}</h3>
                   <span style={{ fontSize: '11px', background: 'rgba(82,106,120,0.08)', color: '#526A78', padding: '2px 8px', borderRadius: '4px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     {user?.role || 'Citizen'}
                   </span>
@@ -567,12 +572,17 @@ export default function Citizen({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px dashed var(--glass-border)', paddingTop: '14px' }}>
                   <input 
                     type="text" 
-                    value={profileName} 
-                    onChange={(e) => setProfileName(e.target.value)}
+                    value={profileNameInput} 
+                    onChange={(e) => setProfileNameInput(e.target.value)}
                     style={{ padding: '8px 10px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-elevated)', color: 'var(--text-primary)', fontSize: '13px' }}
                   />
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    <button onClick={() => { setUser({ ...user, name: profileName }); setIsEditing(false); }} className="btn btn-primary" style={{ fontSize: '11px', padding: '6px 12px' }}>Save</button>
+                    <button onClick={() => { 
+                      const updated = { ...user, name: profileNameInput };
+                      setUser(updated);
+                      localStorage.setItem('citymind_user', JSON.stringify(updated));
+                      setIsEditing(false); 
+                    }} className="btn btn-primary" style={{ fontSize: '11px', padding: '6px 12px' }}>Save</button>
                     <button onClick={() => setIsEditing(false)} className="btn btn-secondary" style={{ fontSize: '11px', padding: '6px 12px' }}>Cancel</button>
                   </div>
                 </div>

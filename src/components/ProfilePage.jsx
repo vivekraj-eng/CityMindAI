@@ -1,22 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Shield, Mail, CheckCircle2, Edit2 } from 'lucide-react';
 
-export default function ProfilePage() {
+export default function ProfilePage({ user, setUser }) {
   const [profile, setProfile] = useState({
-    name: 'City Admin',
-    email: 'admin@citymind.ai',
-    role: 'Senior Operational Engineer',
+    name: user?.name || 'City Admin',
+    email: user?.email || 'admin@citymind.ai',
+    role: user?.role || 'Senior Operational Engineer',
     department: 'Municipal Command Center',
-    clearance: 'Level 1 Clearance',
+    clearance: user?.clearance || 'Level 1 Clearance',
     status: 'Active Duty'
   });
 
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ ...profile });
 
+  useEffect(() => {
+    if (user) {
+      setProfile(prev => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+        role: user.role || prev.role,
+        clearance: user.clearance || prev.clearance
+      }));
+      setEditForm(prev => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+        role: user.role || prev.role,
+        clearance: user.clearance || prev.clearance
+      }));
+    }
+  }, [user]);
+
   const handleSave = (e) => {
     e.preventDefault();
     setProfile({ ...editForm });
+    if (setUser && user) {
+      const updated = {
+        ...user,
+        name: editForm.name,
+        email: editForm.email,
+        role: editForm.role
+      };
+      setUser(updated);
+      localStorage.setItem('citymind_user', JSON.stringify(updated));
+    }
     setIsEditing(false);
   };
 

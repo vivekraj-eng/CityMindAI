@@ -341,7 +341,7 @@ export default function Authority({
         )}
 
         {activeTab === 'profile' && (
-          <ProfilePage />
+          <ProfilePage user={user} setUser={setUser} />
         )}
       </main>
     </div>
