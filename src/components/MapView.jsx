@@ -219,7 +219,7 @@ export default function MapView({ complaints, onSelectTicket }) {
   // Multi-Dropdown Filter matching
   const filteredComplaints = geocodedComplaints.filter((c) => {
     const matchesPriority = filterPriority === 'All' || c.urgency?.toLowerCase() === filterPriority.toLowerCase();
-    const matchesDept = filterDept === 'All' || c.category?.split(' & ')[0].toLowerCase().includes(filterDept.toLowerCase());
+    const matchesDept = filterDept === 'All' || (c.category || '').split(' & ')[0].toLowerCase().includes(filterDept.toLowerCase());
     const matchesStatus = filterStatus === 'All' || c.status?.toLowerCase() === filterStatus.toLowerCase();
     return matchesPriority && matchesDept && matchesStatus;
   });
