@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   MapPin, 
   Info, 
@@ -7,79 +7,419 @@ import {
   ZoomIn, 
   ZoomOut, 
   Compass, 
-  Layers, 
   Filter, 
-  ExternalLink 
+  ExternalLink,
+  Search,
+  Navigation
 } from 'lucide-react';
 
 export default function MapView({ complaints, onSelectTicket }) {
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+  // Render setup fallback state if API key is missing
+  if (!apiKey) {
+    return (
+      <div 
+        className="map-unavailable-container" 
+        style={{ 
+          padding: '48px 32px', 
+          background: 'var(--surface-color)', 
+          border: '1px solid var(--glass-border)', 
+          borderRadius: '8px', 
+          textAlign: 'center', 
+          margin: '24px 0',
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)'
+        }}
+      >
+        <div style={{ display: 'inline-flex', padding: '16px', background: 'rgba(217, 119, 6, 0.08)', borderRadius: '50%', color: '#d97706', marginBottom: '20px' }}>
+          <AlertTriangle size={40} />
+        </div>
+        <h3 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px', fontFamily: 'var(--font-heading)' }}>
+          Map Service Unavailable
+        </h3>
+        <p style={{ fontSize: '13.5px', color: 'var(--text-secondary)', maxWidth: '460px', margin: '0 auto 24px auto', lineHeight: '1.5' }}>
+          Configure the Google Maps API key in your <code>.env.local</code> to enable live geographic maps, satellite views, and current location tracking.
+        </p>
+        <div style={{ background: 'var(--surface-elevated)', padding: '12px 16px', borderRadius: '6px', display: 'inline-block', border: '1px solid var(--glass-border)', fontSize: '12px', color: 'var(--text-muted)' }}>
+          <code>VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here</code>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Real Google Map Core Code ---
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
+  const currentLocationMarkerRef = useRef(null);
+  const accuracyCircleRef = useRef(null);
+
+  const [isApiLoaded, setIsApiLoaded] = useState(!!window.google);
+  const [geocodedComplaints, setGeocodedComplaints] = useState([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [activePin, setActivePin] = useState(null);
   
-  // 3 Dropdown filters
+  // Dynamic Map state trackers
+  const [mapZoom, setMapZoom] = useState(12);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [locateError, setLocateError] = useState(null);
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Filters State
   const [filterPriority, setFilterPriority] = useState('All');
   const [filterDept, setFilterDept] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
-  
-  // Interactive Map Settings
-  const [zoomLevel, setZoomLevel] = useState(100); // 75 | 100 | 125 | 150 | 200
-  const [isHeatmapEnabled, setIsHeatmapEnabled] = useState(false);
   const [viewMode, setViewMode] = useState('map'); // 'map' | 'list'
 
-  // Hardcoded coordinate placement generator based on ID
-  const getCoordinates = (id) => {
-    const xBase = (id % 100) / 100;
-    const yBase = ((id / 100) % 100) / 100;
-    const x = Math.round(15 + xBase * 70);
-    const y = Math.round(15 + yBase * 70);
-    return { x, y };
-  };
+  // Poll for global script load injected in App.jsx
+  useEffect(() => {
+    if (window.google) return;
+    const interval = setInterval(() => {
+      if (window.google) {
+        setIsApiLoaded(true);
+        clearInterval(interval);
+      }
+    }, 200);
+    return () => clearInterval(interval);
+  }, []);
 
-  const mapComplaints = complaints.map(c => {
-    const coords = getCoordinates(c.id);
-    return { ...c, ...coords };
-  });
+  // Geocode addresses of complaints that lack real coords on load
+  useEffect(() => {
+    if (!isApiLoaded) return;
 
-  const filteredMapComplaints = mapComplaints.filter(c => {
+    const geocodeRecords = async () => {
+      setIsGeocoding(true);
+      const geocoder = new window.google.maps.Geocoder();
+
+      const resolved = await Promise.all(
+        complaints.map(async (c) => {
+          // If complaint already has stored coords from DB
+          if (c.latitude !== undefined && c.latitude !== null && c.latitude !== '') {
+            const parsedLat = parseFloat(c.latitude);
+            const parsedLng = parseFloat(c.longitude);
+            if (!isNaN(parsedLat) && !isNaN(parsedLng)) {
+              return { ...c, lat: parsedLat, lng: parsedLng };
+            }
+          }
+
+          // If text only, geocode using Google Maps API (Do NOT generate fake coords)
+          try {
+            const coords = await new Promise((resolve) => {
+              geocoder.geocode({ address: c.location }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                  const loc = results[0].geometry.location;
+                  resolve({ lat: loc.lat(), lng: loc.lng() });
+                } else {
+                  resolve(null);
+                }
+              });
+            });
+            if (coords) {
+              return { ...c, lat: coords.lat, lng: coords.lng };
+            }
+          } catch (err) {
+            console.warn("Geocoding failed for address:", c.location, err);
+          }
+
+          return { ...c, lat: null, lng: null };
+        })
+      );
+
+      setGeocodedComplaints(resolved);
+      setIsGeocoding(false);
+    };
+
+    geocodeRecords();
+  }, [complaints, isApiLoaded]);
+
+  // Initialize Map Instance
+  useEffect(() => {
+    if (!isApiLoaded || !mapRef.current || mapInstanceRef.current) return;
+
+    // Center map around a default city coordinate (e.g. New York Center)
+    const defaultCenter = { lat: 40.7128, lng: -74.0060 };
+
+    const map = new window.google.maps.Map(mapRef.current, {
+      center: defaultCenter,
+      zoom: 12,
+      maxZoom: 19,
+      minZoom: 3,
+      mapTypeControl: true,
+      fullscreenControl: false,
+      streetViewControl: false,
+      styles: [
+        {
+          featureType: "water",
+          elementType: "geometry",
+          stylers: [{ color: "#e9edf0" }]
+        },
+        {
+          featureType: "landscape",
+          elementType: "geometry",
+          stylers: [{ color: "#f7f5f2" }]
+        },
+        {
+          featureType: "road",
+          elementType: "geometry",
+          stylers: [{ color: "#ffffff" }]
+        },
+        {
+          featureType: "poi",
+          stylers: [{ visibility: "off" }]
+        }
+      ]
+    });
+
+    mapInstanceRef.current = map;
+
+    // Track map zoom dynamically to trigger clustering recalculations
+    const zoomListener = map.addListener('zoom_changed', () => {
+      setMapZoom(map.getZoom());
+    });
+
+    return () => {
+      window.google.maps.event.removeListener(zoomListener);
+      mapInstanceRef.current = null;
+    };
+  }, [isApiLoaded]);
+
+  // Multi-Dropdown Filter matching
+  const filteredComplaints = geocodedComplaints.filter((c) => {
     const matchesPriority = filterPriority === 'All' || c.urgency?.toLowerCase() === filterPriority.toLowerCase();
-    const matchesDept = filterDept === 'All' || c.category === filterDept;
+    const matchesDept = filterDept === 'All' || c.category?.split(' & ')[0].toLowerCase().includes(filterDept.toLowerCase());
     const matchesStatus = filterStatus === 'All' || c.status?.toLowerCase() === filterStatus.toLowerCase();
     return matchesPriority && matchesDept && matchesStatus;
   });
 
-  // Calculate high-density zones for Heatmap rendering
-  const getHeatmapClusters = () => {
-    // If coordinates are within 10% delta of each other, group them
-    const densityPoints = [];
-    filteredMapComplaints.forEach(c => {
-      const existing = densityPoints.find(p => Math.abs(p.x - c.x) < 8 && Math.abs(p.y - c.y) < 8);
-      if (existing) {
-        existing.weight += 1;
-      } else {
-        densityPoints.push({ x: c.x, y: c.y, weight: 1 });
+  // Calculate In-Memory Clusters based on Zoom Level distance thresholds
+  const getClusters = (list, zoom) => {
+    const gridSize = 180 / Math.pow(2, zoom + 2); // Dynamic grid bounds
+    const clusters = [];
+
+    list.forEach((c) => {
+      if (c.lat === null || c.lng === null) return;
+
+      let added = false;
+      for (let cluster of clusters) {
+        const dLat = Math.abs(cluster.center.lat - c.lat);
+        const dLng = Math.abs(cluster.center.lng - c.lng);
+        if (dLat < gridSize && dLng < gridSize) {
+          cluster.tickets.push(c);
+          // Update cluster centroid
+          cluster.center.lat = (cluster.center.lat * (cluster.tickets.length - 1) + c.lat) / cluster.tickets.length;
+          cluster.center.lng = (cluster.center.lng * (cluster.tickets.length - 1) + c.lng) / cluster.tickets.length;
+          added = true;
+          break;
+        }
+      }
+
+      if (!added) {
+        clusters.push({
+          center: { lat: c.lat, lng: c.lng },
+          tickets: [c]
+        });
       }
     });
-    return densityPoints;
+
+    return clusters;
   };
 
-  const heatmapPoints = getHeatmapClusters();
+  // Re-draw Markers & Clusters whenever map constraints or filters change
+  useEffect(() => {
+    if (!mapInstanceRef.current || !window.google) return;
 
+    // 1. Clear previous markers
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
+
+    // 2. Fetch clusters
+    const clusters = getClusters(filteredComplaints, mapZoom);
+
+    // 3. Render markers & clusters on map canvas
+    clusters.forEach((cluster) => {
+      const ticketCount = cluster.tickets.length;
+
+      if (ticketCount === 1) {
+        // Render single custom circular dot marker matching CityMindAI priority guidelines
+        const ticket = cluster.tickets[0];
+        
+        let color = '#526A78'; // Low/default -> Blue-gray
+        if (ticket.status?.toLowerCase() === 'resolved') {
+          color = '#2e7d32'; // Muted green
+        } else if (ticket.urgency?.toLowerCase() === 'critical') {
+          color = '#B9654B'; // Terracotta red
+        } else if (ticket.urgency?.toLowerCase() === 'high') {
+          color = '#d97706'; // Orange/amber
+        } else if (ticket.urgency?.toLowerCase() === 'medium') {
+          color = '#3b82f6'; // Muted blue
+        }
+
+        const marker = new window.google.maps.Marker({
+          position: cluster.center,
+          map: mapInstanceRef.current,
+          title: ticket.title,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: color,
+            fillOpacity: 0.95,
+            strokeColor: '#FFF9F4',
+            strokeWeight: 1.5,
+            scale: 8
+          }
+        });
+
+        marker.addListener('click', () => {
+          setActivePin(ticket);
+        });
+
+        markersRef.current.push(marker);
+      } else {
+        // Render cluster bubble marker with text label
+        const clusterMarker = new window.google.maps.Marker({
+          position: cluster.center,
+          map: mapInstanceRef.current,
+          label: {
+            text: String(ticketCount),
+            color: '#FFFFFF',
+            fontSize: '11px',
+            fontWeight: 'bold'
+          },
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: '#B9654B', // Terracotta cluster indicator
+            fillOpacity: 0.85,
+            strokeColor: '#FFF9F4',
+            strokeWeight: 2,
+            scale: 13
+          }
+        });
+
+        clusterMarker.addListener('click', () => {
+          const map = mapInstanceRef.current;
+          map.setZoom(map.getZoom() + 2);
+          map.setCenter(cluster.center);
+        });
+
+        markersRef.current.push(clusterMarker);
+      }
+    });
+
+    // 4. Center map automatically on coordinates if first loading and centering is not yet set
+    if (filteredComplaints.length > 0 && mapZoom === 12) {
+      const valid = filteredComplaints.find(c => c.lat !== null);
+      if (valid) {
+        mapInstanceRef.current.setCenter({ lat: valid.lat, lng: valid.lng });
+      }
+    }
+  }, [filteredComplaints, mapZoom, isApiLoaded]);
+
+  // Geolocation centering tracker ("Locate Me")
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) {
+      setLocateError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setIsLocating(true);
+    setLocateError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setIsLocating(false);
+        const { latitude, longitude, accuracy } = position.coords;
+        const pos = { lat: latitude, lng: longitude };
+
+        const map = mapInstanceRef.current;
+        if (map) {
+          map.setCenter(pos);
+          map.setZoom(15);
+        }
+
+        // Clean old current location elements
+        if (currentLocationMarkerRef.current) currentLocationMarkerRef.current.setMap(null);
+        if (accuracyCircleRef.current) accuracyCircleRef.current.setMap(null);
+
+        // Draw fresh glowing cyan user dot
+        currentLocationMarkerRef.current = new window.google.maps.Marker({
+          position: pos,
+          map,
+          title: "Your Location",
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            fillColor: '#06b6d4', // Cyan user location
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+            scale: 7
+          }
+        });
+
+        // Add accuracy shadow circle overlay
+        if (accuracy) {
+          accuracyCircleRef.current = new window.google.maps.Circle({
+            map,
+            center: pos,
+            radius: accuracy,
+            fillColor: '#06b6d4',
+            fillOpacity: 0.08,
+            strokeColor: '#06b6d4',
+            strokeOpacity: 0.25,
+            strokeWeight: 1
+          });
+        }
+      },
+      (err) => {
+        setIsLocating(false);
+        setLocateError("Location access denied or timed out.");
+        console.warn("Geolocation permission error:", err);
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  // Address search query submit
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim() || !window.google) return;
+
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ address: searchQuery }, (results, status) => {
+      if (status === 'OK' && results[0]) {
+        const loc = results[0].geometry.location;
+        const map = mapInstanceRef.current;
+        if (map) {
+          map.setCenter(loc);
+          map.setZoom(14);
+        }
+        setActivePin(null);
+      } else {
+        setLocateError("Search address location not found.");
+      }
+    });
+  };
+
+  // Zoom helpers
   const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 25, 200));
+    if (mapInstanceRef.current) mapInstanceRef.current.setZoom(mapInstanceRef.current.getZoom() + 1);
   };
 
   const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 25, 75));
+    if (mapInstanceRef.current) mapInstanceRef.current.setZoom(mapInstanceRef.current.getZoom() - 1);
   };
 
-  const handleResetLocate = () => {
-    setZoomLevel(100);
-    setActivePin(null);
-  };
+  // Unmount Cleanup
+  useEffect(() => {
+    return () => {
+      markersRef.current.forEach(m => m.setMap(null));
+      if (currentLocationMarkerRef.current) currentLocationMarkerRef.current.setMap(null);
+      if (accuracyCircleRef.current) accuracyCircleRef.current.setMap(null);
+    };
+  }, []);
 
   return (
     <div className="map-view-component">
       
-      {/* Map Header containing filters */}
+      {/* Map Filter Controls row */}
       <div className="map-header" style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div className="map-title-block" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -87,50 +427,97 @@ export default function MapView({ complaints, onSelectTicket }) {
               <Compass size={18} />
             </div>
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Command Center Live Map</h3>
-              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Spatial telemetry and dispatch node hot-spots.</p>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', margin: 0, fontFamily: 'var(--font-heading)' }}>Interactive Geographic Map</h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Real-time civic intelligence, dispatch zones, and telemetry overlays.</p>
             </div>
           </div>
 
-          {/* View Toggles & Map Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button 
-              onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')}
-              style={{ padding: '6px 12px', background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '4px', fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: '600' }}
-            >
-              Show {viewMode === 'map' ? 'Grievance Table' : 'Radar Grid Map'}
-            </button>
-
-            <button
-              onClick={() => setIsHeatmapEnabled(!isHeatmapEnabled)}
-              style={{
-                padding: '6px 12px',
-                background: isHeatmapEnabled ? 'rgba(185, 101, 75, 0.08)' : 'var(--surface-color)',
-                border: isHeatmapEnabled ? '1px solid rgba(185, 101, 75, 0.3)' : '1px solid var(--glass-border)',
-                borderRadius: '4px',
-                fontSize: '12px',
-                color: isHeatmapEnabled ? '#B9654B' : 'var(--text-primary)',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-            >
-              <Layers size={12} />
-              <span>Heatmap {isHeatmapEnabled ? 'ON' : 'OFF'}</span>
-            </button>
-          </div>
+          {/* Toggle radar/grid layout view */}
+          <button 
+            onClick={() => setViewMode(viewMode === 'map' ? 'list' : 'map')}
+            style={{ padding: '6px 12px', background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '4px', fontSize: '12px', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: '600' }}
+          >
+            Show {viewMode === 'map' ? 'Grievance Table List' : 'Radar Map'}
+          </button>
         </div>
 
-        {/* 3 Selectors Row */}
+        {/* Address Search & Geolocation locate panel */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', flex: '1', maxWidth: '420px', position: 'relative' }}>
+            <input 
+              type="text" 
+              placeholder="Search address or coordinate junction..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 36px 8px 12px',
+                borderRadius: '4px',
+                border: '1px solid var(--glass-border)',
+                background: 'var(--surface-color)',
+                color: 'var(--text-primary)',
+                fontSize: '12.5px'
+              }}
+            />
+            <button 
+              type="submit" 
+              style={{
+                position: 'absolute',
+                right: '8px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer'
+              }}
+            >
+              <Search size={14} />
+            </button>
+          </form>
+
+          <button
+            onClick={handleLocateMe}
+            disabled={isLocating}
+            style={{
+              padding: '8px 16px',
+              background: 'var(--surface-color)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '4px',
+              color: 'var(--text-primary)',
+              fontSize: '12.5px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'background 0.2s'
+            }}
+          >
+            <Navigation size={12} className={isLocating ? 'animate-pulse-fast text-cyan' : ''} />
+            <span>{isLocating ? 'Locating...' : 'Locate Me'}</span>
+          </button>
+
+          {locateError && (
+            <span style={{ fontSize: '12px', color: '#B9654B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <AlertTriangle size={12} /> {locateError}
+            </span>
+          )}
+
+          {isGeocoding && (
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Geocoding active tickets...
+            </span>
+          )}
+        </div>
+
+        {/* Dropdown Filters Row */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', background: 'var(--surface-color)', padding: '12px', borderRadius: '6px', border: '1px solid var(--glass-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
             <Filter size={12} />
             <span>Filters:</span>
           </div>
 
-          {/* Priority */}
           <select 
             value={filterPriority} 
             onChange={(e) => { setFilterPriority(e.target.value); setActivePin(null); }}
@@ -143,21 +530,19 @@ export default function MapView({ complaints, onSelectTicket }) {
             <option value="Low">Low</option>
           </select>
 
-          {/* Department */}
           <select 
             value={filterDept} 
             onChange={(e) => { setFilterDept(e.target.value); setActivePin(null); }}
             style={{ padding: '4px 10px', background: 'var(--surface-elevated)', border: '1px solid var(--glass-border)', borderRadius: '4px', fontSize: '12px', color: 'var(--text-primary)' }}
           >
             <option value="All">All Departments</option>
-            <option value="Roads & Infrastructure">Roads & Infrastructure</option>
-            <option value="Water & Sanitation">Water & Sanitation</option>
-            <option value="Public Safety">Public Safety</option>
-            <option value="Waste Management">Waste Management</option>
-            <option value="Lighting & Electricity">Lighting & Electricity</option>
+            <option value="Roads">Roads & Infrastructure</option>
+            <option value="Water">Water & Sanitation</option>
+            <option value="Safety">Public Safety</option>
+            <option value="Waste">Waste Management</option>
+            <option value="Electrical">Lighting & Electricity</option>
           </select>
 
-          {/* Status */}
           <select 
             value={filterStatus} 
             onChange={(e) => { setFilterStatus(e.target.value); setActivePin(null); }}
@@ -174,209 +559,175 @@ export default function MapView({ complaints, onSelectTicket }) {
       </div>
 
       {viewMode === 'map' ? (
-        <div className="map-workspace-grid">
-          {/* Abstract City Grid Canvas */}
-          <div className="map-canvas-card" style={{ overflow: 'hidden', position: 'relative' }}>
+        <div className="map-workspace-grid" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px', alignItems: 'start' }}>
+          
+          {/* Real Google Maps Container */}
+          <div className="map-canvas-card" style={{ height: '480px', position: 'relative', overflow: 'hidden', border: '1px solid var(--glass-border)', borderRadius: '8px' }}>
             
-            {/* Custom Map Navigation Controls */}
+            {/* Custom overlay Zoom Buttons */}
             <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: '20', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button 
                 onClick={handleZoomIn}
-                style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
                 title="Zoom In"
               >
-                <ZoomIn size={14} />
+                <ZoomIn size={15} />
               </button>
               <button 
                 onClick={handleZoomOut}
-                style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                style={{ width: '32px', height: '32px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
                 title="Zoom Out"
               >
-                <ZoomOut size={14} />
-              </button>
-              <button 
-                onClick={handleResetLocate}
-                style={{ width: '28px', height: '28px', borderRadius: '4px', border: '1px solid var(--glass-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
-                title="Reset View"
-              >
-                1:1
+                <ZoomOut size={15} />
               </button>
             </div>
 
+            {/* Map Element */}
             <div 
-              className="abstract-map-canvas"
-              style={{
-                transform: `scale(${zoomLevel / 100})`,
-                transformOrigin: 'center center',
-                transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
-              }}
-            >
-              {/* Grid Lines */}
-              <div className="map-grid-overlay"></div>
-              
-              {/* Streets SVG */}
-              <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" className="map-svg-grid">
-                <line x1="20" y1="0" x2="20" y2="100" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
-                <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
-                <line x1="80" y1="0" x2="80" y2="100" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
-                <line x1="0" y1="30" x2="100" y2="30" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
-                <line x1="0" y1="65" x2="100" y2="65" stroke="rgba(255,255,255,0.03)" strokeWidth="0.5" />
-                <path d="M 0,90 Q 30,70 70,50 T 100,10" fill="none" stroke="rgba(6, 182, 212, 0.05)" strokeWidth="1.5" />
-              </svg>
+              ref={mapRef} 
+              style={{ width: '100%', height: '100%', background: 'var(--surface-elevated)' }}
+            />
 
-              {/* Heatmap Layer Overlays */}
-              {isHeatmapEnabled && heatmapPoints.map((point, idx) => (
-                <div 
-                  key={`heat-${idx}`}
-                  style={{
-                    position: 'absolute',
-                    left: `${point.x}%`,
-                    top: `${point.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    width: `${40 + point.weight * 20}px`,
-                    height: `${40 + point.weight * 20}px`,
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(185,101,75,0.4) 0%, rgba(185,101,75,0.1) 50%, transparent 100%)',
-                    pointerEvents: 'none',
-                    zIndex: '5'
-                  }}
-                />
-              ))}
+            {!isApiLoaded && (
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(248, 238, 231, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '10px' }}>
+                <span className="spinner" style={{ border: '3px solid rgba(185,101,75,0.1)', borderTopColor: '#B9654B', borderRadius: '50%', width: '24px', height: '24px', animation: 'spin-loading 0.8s linear infinite' }}></span>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Loading Google Maps JavaScript API...</span>
+              </div>
+            )}
 
-              {/* Glowing Hotspot Pins */}
-              {filteredMapComplaints.map((pin) => {
-                let colorTheme = '#526A78'; // Low/default -> Blue-gray
-                if (pin.status === 'Resolved') {
-                  colorTheme = '#2e7d32'; // Resolved -> green
-                } else if (pin.urgency?.toLowerCase() === 'critical') {
-                  colorTheme = '#B9654B'; // Critical -> terracotta
-                } else if (pin.urgency?.toLowerCase() === 'high') {
-                  colorTheme = '#d97706'; // High -> orange/amber
-                } else if (pin.urgency?.toLowerCase() === 'medium') {
-                  colorTheme = '#3b82f6'; // Medium -> blue
-                }
-
-                return (
-                  <button
-                    key={pin.id}
-                    className={`map-pin-node ${activePin?.id === pin.id ? 'is-active' : ''}`}
-                    style={{ 
-                      left: `${pin.x}%`, 
-                      top: `${pin.y}%`,
-                      '--pin-color': colorTheme,
-                      zIndex: activePin?.id === pin.id ? '25' : '10'
-                    }}
-                    onClick={() => setActivePin(pin)}
-                  >
-                    <span className="pin-pulse" style={{ animationDelay: `${pin.id % 4 * 0.5}s` }}></span>
-                    <span className="pin-dot"></span>
+            {/* Active Marker popover card overlay */}
+            {activePin && (
+              <div 
+                className="map-info-popover animate-fade-in"
+                style={{ 
+                  position: 'absolute', 
+                  bottom: '16px', 
+                  left: '16px', 
+                  right: '16px', 
+                  maxWidth: '320px', 
+                  zIndex: '25',
+                  background: 'var(--surface-color)',
+                  border: '1px solid var(--glass-border)',
+                  borderRadius: '6px',
+                  padding: '14px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.12)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px dashed var(--glass-border)', paddingBottom: '8px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '700' }}>CASE #{activePin.id.toString().slice(-6)}</span>
+                  <button onClick={() => setActivePin(null)} style={{ border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    <X size={14} />
                   </button>
-                );
-              })}
-
-              {/* Pin Info Popover Window */}
-              {activePin && (
-                <div 
-                  className="map-info-popover"
-                  style={{ 
-                    left: `${activePin.x}%`, 
-                    top: `${activePin.y > 50 ? activePin.y - 30 : activePin.y + 4}%`,
-                    zIndex: '30'
-                  }}
-                >
-                  <div className="popover-header">
-                    <span className="popover-cat">{activePin.category}</span>
-                    <button className="popover-close" onClick={() => setActivePin(null)}>
-                      <X size={12} />
-                    </button>
-                  </div>
-                  <div className="popover-body">
-                    <h4 className="popover-title">{activePin.title}</h4>
-                    <div className="popover-item">
-                      <MapPin size={10} className="text-cyan" />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activePin.location}</span>
-                    </div>
-                    
-                    <div className="popover-footer-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                      <span className={`popover-urgency-badge urgency-${activePin.urgency?.toLowerCase()}`}>
-                        {activePin.urgency}
-                      </span>
-                      <button 
-                        onClick={() => {
-                          if (onSelectTicket) onSelectTicket(activePin.id);
-                        }}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          border: 'none',
-                          background: 'none',
-                          color: 'var(--accent-cyan)',
-                          fontSize: '11px',
-                          fontWeight: '600',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <span>Open complaint</span>
-                        <ExternalLink size={10} />
-                      </button>
-                    </div>
-                  </div>
                 </div>
-              )}
-            </div>
+                <h4 style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>{activePin.title}</h4>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Location: </span>
+                    <span>{activePin.location}</span>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Department: </span>
+                    <span>{activePin.category}</span>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Status: </span>
+                    <span style={{ fontWeight: '600' }}>{activePin.status}</span>
+                  </div>
+                  {activePin.confidence && (
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>AI Confidence: </span>
+                      <span>{activePin.confidence}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', borderTop: '1px solid var(--glass-border)', paddingTop: '10px' }}>
+                  <span className={`popover-urgency-badge urgency-${activePin.urgency?.toLowerCase()}`} style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase', padding: '1px 6px', borderRadius: '3px' }}>
+                    {activePin.urgency}
+                  </span>
+                  <button 
+                    onClick={() => onSelectTicket && onSelectTicket(activePin.id)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'var(--accent-cyan)',
+                      border: 'none',
+                      color: '#ffffff',
+                      fontSize: '11px',
+                      fontWeight: '600',
+                      padding: '4px 10px',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span>Open complaint</span>
+                    <ExternalLink size={10} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Spatial legend */}
-          <div className="map-legend-card">
-            <h4>Command Map Legend</h4>
-            <div className="legend-items">
-              <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#B9654B' }}></span>
-                <div className="legend-text">
-                  <span className="legend-name">Critical Telemetry Node</span>
-                  <span className="legend-desc">Safety hazard or utility failure.</span>
+          {/* Spatial Legend and guidelines */}
+          <div className="map-legend-card" style={{ padding: '20px', background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '8px' }}>
+            <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '14px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>Command Map Legend</h4>
+            <div className="legend-items" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className="legend-dot" style={{ display: 'block', width: '10px', height: '10px', borderRadius: '50%', background: '#B9654B' }}></span>
+                <div className="legend-text" style={{ fontSize: '12px' }}>
+                  <span className="legend-name" style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block' }}>Critical Priority Pin</span>
+                  <span className="legend-desc" style={{ color: 'var(--text-secondary)' }}>Immediate municipal crew dispatch required.</span>
                 </div>
               </div>
               
-              <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#d97706' }}></span>
-                <div className="legend-text">
-                  <span className="legend-name">High Priority Node</span>
-                  <span className="legend-desc">Engineering repair scheduled.</span>
+              <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className="legend-dot" style={{ display: 'block', width: '10px', height: '10px', borderRadius: '50%', background: '#d97706' }}></span>
+                <div className="legend-text" style={{ fontSize: '12px' }}>
+                  <span className="legend-name" style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block' }}>High Priority Pin</span>
+                  <span className="legend-desc" style={{ color: 'var(--text-secondary)' }}>Engineering work order scheduled.</span>
                 </div>
               </div>
 
-              <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#3b82f6' }}></span>
-                <div className="legend-text">
-                  <span className="legend-name">Medium Node</span>
-                  <span className="legend-desc">General infrastructure request.</span>
+              <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className="legend-dot" style={{ display: 'block', width: '10px', height: '10px', borderRadius: '50%', background: '#3b82f6' }}></span>
+                <div className="legend-text" style={{ fontSize: '12px' }}>
+                  <span className="legend-name" style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block' }}>Medium Priority Pin</span>
+                  <span className="legend-desc" style={{ color: 'var(--text-secondary)' }}>General maintenance or request.</span>
                 </div>
               </div>
 
-              <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#2e7d32' }}></span>
-                <div className="legend-text">
-                  <span className="legend-name">Resolved Case Node</span>
-                  <span className="legend-desc">Confirmed municipal completion.</span>
+              <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className="legend-dot" style={{ display: 'block', width: '10px', height: '10px', borderRadius: '50%', background: '#2e7d32' }}></span>
+                <div className="legend-text" style={{ fontSize: '12px' }}>
+                  <span className="legend-name" style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block' }}>Resolved / Completed Case</span>
+                  <span className="legend-desc" style={{ color: 'var(--text-secondary)' }}>Verified completed Municipal action.</span>
+                </div>
+              </div>
+
+              <div className="legend-item" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span className="legend-dot" style={{ display: 'block', width: '10px', height: '10px', borderRadius: '50%', background: '#06b6d4' }}></span>
+                <div className="legend-text" style={{ fontSize: '12px' }}>
+                  <span className="legend-name" style={{ fontWeight: '600', color: 'var(--text-primary)', display: 'block' }}>User Current Location</span>
+                  <span className="legend-desc" style={{ color: 'var(--text-secondary)' }}>Center coordinate of local device with accuracy radius.</span>
                 </div>
               </div>
             </div>
 
-            <div className="map-instructions-box">
-              <Info size={16} className="text-cyan" />
-              <p>Click on any pulsing node marker inside the grid map to display coordinates, urgency indicators, and dispatch details.</p>
+            <div className="map-instructions-box" style={{ marginTop: '20px', display: 'flex', gap: '8px', padding: '12px', background: 'var(--surface-elevated)', borderRadius: '6px', border: '1px solid var(--glass-border)', fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+              <Info size={16} className="text-cyan" style={{ flexShrink: 0 }} />
+              <p style={{ margin: 0, lineHeight: '1.4' }}>Use the search box or "Locate Me" to zoom to places. Custom markers cluster dynamically at lower zoom levels; click a cluster to expand it.</p>
             </div>
           </div>
         </div>
       ) : (
-        /* Grievance Table View */
-        <div className="list-card-wrapper" style={{ padding: '20px' }}>
-          {filteredMapComplaints.length === 0 ? (
+        /* Table Queue List View */
+        <div className="list-card-wrapper" style={{ padding: '20px', background: 'var(--surface-color)', border: '1px solid var(--glass-border)', borderRadius: '8px' }}>
+          {filteredComplaints.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
               <AlertTriangle size={36} className="text-muted" style={{ marginBottom: '12px' }} />
-              <p>No complaints match active radar grid filter parameters.</p>
+              <p>No complaints match selected priorities or category parameters.</p>
             </div>
           ) : (
             <div className="table-responsive" style={{ overflowX: 'auto' }}>
@@ -393,7 +744,7 @@ export default function MapView({ complaints, onSelectTicket }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMapComplaints.map((ticket) => (
+                  {filteredComplaints.map((ticket) => (
                     <tr key={ticket.id} style={{ borderBottom: '1px solid rgba(231,214,201,0.3)' }}>
                       <td style={{ padding: '10px 4px', color: 'var(--text-muted)' }}>#{ticket.id.toString().slice(-6)}</td>
                       <td style={{ padding: '10px 4px', fontWeight: '600', color: 'var(--text-primary)' }}>{ticket.title}</td>
@@ -407,10 +758,8 @@ export default function MapView({ complaints, onSelectTicket }) {
                       <td style={{ padding: '10px 4px', color: 'var(--text-secondary)' }}>{ticket.status}</td>
                       <td style={{ padding: '10px 4px', textAlign: 'right' }}>
                         <button 
-                          onClick={() => {
-                            if (onSelectTicket) onSelectTicket(ticket.id);
-                          }}
-                          style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--glass-border)', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}
+                          onClick={() => onSelectTicket && onSelectTicket(ticket.id)}
+                          style={{ padding: '4px 8px', background: 'none', border: '1px solid var(--glass-border)', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', color: 'var(--text-primary)' }}
                         >
                           Inspect
                         </button>

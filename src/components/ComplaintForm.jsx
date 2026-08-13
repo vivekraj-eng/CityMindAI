@@ -86,6 +86,30 @@ export default function ComplaintForm({ addComplaint }) {
         }
       }
 
+      // Geocode address location to latitude/longitude using Google Geocoder
+      let latitude = null;
+      let longitude = null;
+      if (window.google && window.google.maps) {
+        try {
+          const geocoder = new window.google.maps.Geocoder();
+          const geocodeResult = await new Promise((resolve) => {
+            geocoder.geocode({ address: location }, (results, status) => {
+              if (status === 'OK' && results[0]) {
+                resolve(results[0].geometry.location);
+              } else {
+                resolve(null);
+              }
+            });
+          });
+          if (geocodeResult) {
+            latitude = geocodeResult.lat();
+            longitude = geocodeResult.lng();
+          }
+        } catch (geocodeErr) {
+          console.warn("Geocoding failed during submission:", geocodeErr);
+        }
+      }
+
       // Call Gemini analysis
       const aiResponse = await analyzeComplaint(title, description, location, category === 'Auto-Detect' ? null : category, imageData);
       
@@ -107,7 +131,9 @@ export default function ComplaintForm({ addComplaint }) {
         detectedIssue: aiResponse.detectedIssue,
         recommendedAction: aiResponse.recommendedAction,
         confidence: aiResponse.confidence,
-        image: imagePreview // Store the preview base64 reference locally
+        image: imagePreview, // Store the preview base64 reference locally
+        latitude,
+        longitude
       };
 
       // Add to global state

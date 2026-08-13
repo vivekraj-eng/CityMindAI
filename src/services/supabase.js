@@ -80,23 +80,32 @@ export const updateComplaint = async (id, updates) => {
 };
 
 // Data Translators
-const complaintToDb = (c) => ({
-  id: c.id,
-  title: c.title,
-  description: c.description,
-  category: c.department || c.category,
-  location: c.location,
-  urgency: c.priority || c.urgency,
-  status: c.status,
-  ai_summary: c.aiSummary,
-  tags: c.tags,
-  sentiment: c.sentiment,
-  detected_issue: c.detectedIssue,
-  recommended_action: c.recommendedAction,
-  confidence: c.confidence,
-  created_at: c.createdAt || new Date().toISOString(),
-  updated_at: c.updatedAt || new Date().toISOString()
-});
+const complaintToDb = (c) => {
+  const dbObj = {
+    id: c.id,
+    title: c.title,
+    description: c.description,
+    category: c.department || c.category,
+    location: c.location,
+    urgency: c.priority || c.urgency,
+    status: c.status,
+    ai_summary: c.aiSummary,
+    tags: c.tags,
+    sentiment: c.sentiment,
+    detected_issue: c.detectedIssue,
+    recommended_action: c.recommendedAction,
+    confidence: c.confidence,
+    created_at: c.createdAt || new Date().toISOString(),
+    updated_at: c.updatedAt || new Date().toISOString()
+  };
+  if (c.latitude !== undefined && c.latitude !== null) {
+    dbObj.latitude = c.latitude;
+  }
+  if (c.longitude !== undefined && c.longitude !== null) {
+    dbObj.longitude = c.longitude;
+  }
+  return dbObj;
+};
 
 const dbToComplaint = (row) => ({
   id: row.id,
@@ -115,5 +124,7 @@ const dbToComplaint = (row) => ({
   recommendedAction: row.recommended_action,
   confidence: row.confidence,
   createdAt: row.created_at,
-  updatedAt: row.updated_at
+  updatedAt: row.updated_at,
+  latitude: row.latitude !== undefined ? row.latitude : null,
+  longitude: row.longitude !== undefined ? row.longitude : null
 });

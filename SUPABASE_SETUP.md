@@ -25,12 +25,21 @@ create table complaints (
   recommended_action text,
   confidence text,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  latitude float8,
+  longitude float8
 );
 
 -- Enable Row Level Security (RLS)
 alter table complaints enable row level security;
 ```
+
+> [!TIP]
+> **Database Migration Alert**: If your table already exists, run this SQL migration query inside the SQL editor to append the geocoding coordinates column structures:
+> ```sql
+> alter table complaints add column latitude float8;
+> alter table complaints add column longitude float8;
+> ```
 
 ---
 
