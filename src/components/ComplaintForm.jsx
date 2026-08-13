@@ -86,29 +86,9 @@ export default function ComplaintForm({ addComplaint }) {
         }
       }
 
-      // Geocode address location to latitude/longitude using Google Geocoder
+      // Geocode address location to latitude/longitude (removed Google dependency)
       let latitude = null;
       let longitude = null;
-      if (window.google && window.google.maps) {
-        try {
-          const geocoder = new window.google.maps.Geocoder();
-          const geocodeResult = await new Promise((resolve) => {
-            geocoder.geocode({ address: location }, (results, status) => {
-              if (status === 'OK' && results[0]) {
-                resolve(results[0].geometry.location);
-              } else {
-                resolve(null);
-              }
-            });
-          });
-          if (geocodeResult) {
-            latitude = geocodeResult.lat();
-            longitude = geocodeResult.lng();
-          }
-        } catch (geocodeErr) {
-          console.warn("Geocoding failed during submission:", geocodeErr);
-        }
-      }
 
       // Call Gemini analysis
       const aiResponse = await analyzeComplaint(title, description, location, category === 'Auto-Detect' ? null : category, imageData);

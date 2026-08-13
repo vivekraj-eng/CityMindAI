@@ -84,22 +84,6 @@ function App() {
     loadData();
   }, []);
 
-  // Globally load Google Maps JavaScript API script
-  useEffect(() => {
-    const key = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-    if (key && !window.google) {
-      const alreadyLoading = Array.from(document.getElementsByTagName('script')).some(
-        s => s.src && s.src.includes('maps.googleapis.com')
-      );
-      if (!alreadyLoading) {
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=places`;
-        script.async = true;
-        script.defer = true;
-        document.head.appendChild(script);
-      }
-    }
-  }, []);
 
   const enrichComplaints = (rawList) => {
     return rawList.map((c) => {
