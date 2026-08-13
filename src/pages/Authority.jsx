@@ -13,7 +13,7 @@ import {
   ListTodo
 } from 'lucide-react';
 
-export default function Authority({ complaints, setComplaints, setView }) {
+export default function Authority({ complaints, updateComplaintStatus, updateComplaintCategory, setView }) {
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'map' | 'analytics'
 
   // Calculate metrics based on live complaints state
@@ -27,18 +27,6 @@ export default function Authority({ complaints, setComplaints, setView }) {
   ).length;
 
   const resolutionRate = totalTickets > 0 ? Math.round((resolvedTickets / totalTickets) * 100) : 0;
-
-  const updateComplaintStatus = (ticketId, nextStatus) => {
-    setComplaints((prev) =>
-      prev.map((c) => (c.id === ticketId ? { ...c, status: nextStatus } : c))
-    );
-  };
-
-  const updateComplaintCategory = (ticketId, nextCategory) => {
-    setComplaints((prev) =>
-      prev.map((c) => (c.id === ticketId ? { ...c, category: nextCategory } : c))
-    );
-  };
 
   return (
     <div className="authority-portal container">
