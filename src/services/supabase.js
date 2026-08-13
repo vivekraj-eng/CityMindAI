@@ -177,12 +177,21 @@ export const signInWithEmail = async (email, password) => {
     });
     
     if (!response.ok) {
-      const errData = await response.json();
-      const msg = errData.error_description || errData.error || '';
+      let msg = '';
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            const errData = JSON.parse(text);
+            msg = errData.error_description || errData.error || errData.msg || '';
+          } catch (e) {}
+        }
+      } catch (e) {}
+
       if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid credentials')) {
         throw new Error('Incorrect password. Please try again.');
       }
-      throw new Error(msg || 'Authentication failed.');
+      throw new Error(msg || 'Unable to sign in right now. Please try again.');
     }
     
     const data = await response.json();
@@ -197,7 +206,14 @@ export const signInWithEmail = async (email, password) => {
     };
   } catch (error) {
     console.error("Supabase Auth email signin failed:", error);
-    throw error;
+    if (error.message && (
+      error.message.includes('Incorrect password') || 
+      error.message.includes('No account found') || 
+      error.message.includes('Please enter a valid email address')
+    )) {
+      throw error;
+    }
+    throw new Error('Unable to sign in right now. Please try again.');
   }
 };
 
@@ -232,8 +248,17 @@ export const signUpWithEmail = async (fullName, email, password, role = 'Citizen
     });
     
     if (!response.ok) {
-      const errData = await response.json();
-      throw new Error(errData.msg || errData.error_description || 'Signup failed.');
+      let msg = '';
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            const errData = JSON.parse(text);
+            msg = errData.msg || errData.error_description || errData.error || '';
+          } catch (e) {}
+        }
+      } catch (e) {}
+      throw new Error(msg || 'Unable to sign up right now. Please try again.');
     }
     
     const data = await response.json();
@@ -247,7 +272,10 @@ export const signUpWithEmail = async (fullName, email, password, role = 'Citizen
     };
   } catch (error) {
     console.error("Supabase Auth email signup failed:", error);
-    throw error;
+    if (error.message && error.message.includes('already exists')) {
+      throw error;
+    }
+    throw new Error('Unable to sign up right now. Please try again.');
   }
 };
 

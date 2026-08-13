@@ -14,7 +14,7 @@ export default function LoginPage({ setView, setUser, setCitizenTab }) {
   const handleSignIn = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
-      setErrorMsg('Please fill in all credentials.');
+      setErrorMsg('Please enter your email and password.');
       return;
     }
 
